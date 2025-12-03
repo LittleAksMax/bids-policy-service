@@ -3,8 +3,8 @@ package config
 import (
 	"errors"
 
-	"github.com/LittleAksMax/policy-service/internal/cache"
-	"github.com/LittleAksMax/policy-service/internal/db"
+	"github.com/LittleAksMax/bids-policy-service/internal/cache"
+	"github.com/LittleAksMax/bids-policy-service/internal/db"
 )
 
 type Config struct {

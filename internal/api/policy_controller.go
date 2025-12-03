@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"net/http"
 
-	"github.com/LittleAksMax/policy-service/internal/service"
+	"github.com/LittleAksMax/bids-policy-service/internal/service"
 	"github.com/go-chi/chi/v5"
 )
 

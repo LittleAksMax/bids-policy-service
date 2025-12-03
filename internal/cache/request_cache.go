@@ -4,7 +4,7 @@ import (
 	"context"
 	"time"
 
-	"github.com/LittleAksMax/policy-service/internal/health"
+	"github.com/LittleAksMax/bids-policy-service/internal/health"
 )
 
 // RequestCache is a key-value store for caching web requests for policies.

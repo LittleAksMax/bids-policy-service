@@ -6,7 +6,7 @@ import (
 	"log"
 	"net/url"
 
-	"github.com/LittleAksMax/policy-service/internal/health"
+	"github.com/LittleAksMax/bids-policy-service/internal/health"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"

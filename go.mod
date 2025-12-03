@@ -1,4 +1,4 @@
-module github.com/LittleAksMax/policy-service
+module github.com/LittleAksMax/bids-policy-service
 
 go 1.21.5
 

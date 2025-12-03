@@ -5,8 +5,8 @@ import (
 	"encoding/json"
 	"time"
 
-	"github.com/LittleAksMax/policy-service/internal/cache"
-	"github.com/LittleAksMax/policy-service/internal/repository"
+	"github.com/LittleAksMax/bids-policy-service/internal/cache"
+	"github.com/LittleAksMax/bids-policy-service/internal/repository"
 )
 
 // PolicyService provides business logic for policies, with cache support.

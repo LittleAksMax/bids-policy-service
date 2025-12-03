@@ -3,12 +3,12 @@ package api
 import (
 	"net/http"
 
-	"github.com/LittleAksMax/policy-service/internal/cache"
-	"github.com/LittleAksMax/policy-service/internal/config"
-	"github.com/LittleAksMax/policy-service/internal/db"
-	"github.com/LittleAksMax/policy-service/internal/health"
-	"github.com/LittleAksMax/policy-service/internal/repository"
-	"github.com/LittleAksMax/policy-service/internal/service"
+	"github.com/LittleAksMax/bids-policy-service/internal/cache"
+	"github.com/LittleAksMax/bids-policy-service/internal/config"
+	"github.com/LittleAksMax/bids-policy-service/internal/db"
+	"github.com/LittleAksMax/bids-policy-service/internal/health"
+	"github.com/LittleAksMax/bids-policy-service/internal/repository"
+	"github.com/LittleAksMax/bids-policy-service/internal/service"
 	"github.com/go-chi/chi/v5"
 )
 

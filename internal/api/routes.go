@@ -3,7 +3,7 @@ package api
 import (
 	"net/http"
 
-	"github.com/LittleAksMax/policy-service/internal/health"
+	"github.com/LittleAksMax/bids-policy-service/internal/health"
 	"github.com/go-chi/chi/v5"
 )
 

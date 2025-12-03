@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/LittleAksMax/policy-service/internal/repository"
+	"github.com/LittleAksMax/bids-policy-service/internal/repository"
 )
 
 type mockRepo struct {

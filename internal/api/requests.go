@@ -1,6 +1,6 @@
 package api
 
-import "github.com/LittleAksMax/policy-service/internal/repository"
+import "github.com/LittleAksMax/bids-policy-service/internal/repository"
 
 // CreatePolicyRequest is the request DTO for creating a policy
 type CreatePolicyRequest struct {

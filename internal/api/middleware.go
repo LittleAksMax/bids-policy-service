@@ -8,6 +8,7 @@ import (
 	"reflect"
 	"strings"
 
+	"github.com/LittleAksMax/bids-util/requests"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/google/uuid"
@@ -18,17 +19,15 @@ type contextKey string
 
 const requestBodyKey contextKey = "requestBody"
 
-// apiResponse reused for controller JSON responses.
-type apiResponse struct {
-	Success bool        `json:"success"`
-	Data    interface{} `json:"data,omitempty"`
-	Error   string      `json:"error,omitempty"`
-}
-
-func writeJSON(w http.ResponseWriter, status int, payload apiResponse) {
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(status)
-	_ = json.NewEncoder(w).Encode(payload)
+// GetAuthClaims retrieves the auth claims from the request context.
+// This should only be called after ValidateAccessToken middleware has run.
+func GetAuthClaims(r *http.Request, claimsContextKey string) *requests.Claims {
+	if claims := r.Context().Value(claimsContextKey); claims != nil {
+		if typedClaims, ok := claims.(*requests.Claims); ok {
+			return typedClaims
+		}
+	}
+	return nil
 }
 
 // ValidateRequest is a generic middleware that validates request body fields.
@@ -38,23 +37,23 @@ func ValidateRequest[T any]() func(http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			var reqValue T
 			if err := json.NewDecoder(r.Body).Decode(&reqValue); err != nil {
-				writeJSON(w, http.StatusBadRequest, apiResponse{Success: false, Error: "invalid request body"})
+				requests.WriteJSON(w, http.StatusBadRequest, requests.APIResponse{Success: false, Error: "invalid request body"})
 				return
 			}
 			if err := validateRequiredFields(&reqValue); err != nil {
-				writeJSON(w, http.StatusBadRequest, apiResponse{Success: false, Error: err.Error()})
+				requests.WriteJSON(w, http.StatusBadRequest, requests.APIResponse{Success: false, Error: err.Error()})
 				return
 			}
 			if err := validateEmails(&reqValue); err != nil {
-				writeJSON(w, http.StatusBadRequest, apiResponse{Success: false, Error: err.Error()})
+				requests.WriteJSON(w, http.StatusBadRequest, requests.APIResponse{Success: false, Error: err.Error()})
 				return
 			}
 			if err := validateUUIDs(&reqValue); err != nil {
-				writeJSON(w, http.StatusBadRequest, apiResponse{Success: false, Error: err.Error()})
+				requests.WriteJSON(w, http.StatusBadRequest, requests.APIResponse{Success: false, Error: err.Error()})
 				return
 			}
 			if err := validatePasswords(&reqValue); err != nil {
-				writeJSON(w, http.StatusBadRequest, apiResponse{Success: false, Error: err.Error()})
+				requests.WriteJSON(w, http.StatusBadRequest, requests.APIResponse{Success: false, Error: err.Error()})
 				return
 			}
 			ctx := context.WithValue(r.Context(), requestBodyKey, &reqValue)

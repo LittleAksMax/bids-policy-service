@@ -31,14 +31,18 @@ type mockCache struct {
 	expires map[string]time.Time
 }
 
-func (m *mockCache) Save(ctx context.Context, token string, userID string, expiresAt time.Time) error {
-	m.store[token] = userID
-	m.expires[token] = expiresAt
+func (m *mockCache) Save(ctx context.Context, key string, value string, expiresAt time.Time) error {
+	m.store[key] = value
+	m.expires[key] = expiresAt
 	return nil
 }
-func (m *mockCache) Get(ctx context.Context, token string) (string, time.Time, error) {
-	v, ok := m.store[token]
-	e, ok2 := m.expires[token]
+func (m *mockCache) Get(ctx context.Context, key string) (string, time.Time, error) {
+	println("mockCache.Get called with key=", key)
+	for k, v := range m.store {
+		println("store[", k, "] = ", v)
+	}
+	v, ok := m.store[key]
+	e, ok2 := m.expires[key]
 	if ok && ok2 {
 		return v, e, nil
 	}
@@ -52,35 +56,60 @@ func (m *mockCache) Delete(ctx context.Context, token string) error {
 func (m *mockCache) HealthCheck(ctx context.Context) error { return nil }
 
 func TestGetPolicy_CacheHit(t *testing.T) {
-	p := &repository.Policy{ID: "123", UserID: "u1", Name: "n", Rules: []string{"r"}}
+	t.Parallel()
+	key := "cachehit-123"
+	p := &repository.Policy{ID: key, UserID: "u1", Name: "n", Rules: &repository.Terminal{Type: "terminal", Op: repository.RuleOp{Type: "add", Amount: repository.RuleAmount{Neg: false, Amount: 1, Perc: false}}}}
 	cacheData, _ := json.Marshal(p)
-	mc := &mockCache{store: map[string]string{"123": string(cacheData)}, expires: map[string]time.Time{"123": time.Now().Add(1 * time.Hour)}}
+	expiresAt := time.Now().Add(1 * time.Hour)
+	mc := &mockCache{store: make(map[string]string), expires: make(map[string]time.Time)}
+	mc.store[key] = string(cacheData)
+	mc.expires[key] = expiresAt
 	repo := &mockRepo{policy: p}
 	svc := NewPolicyService(repo, mc)
-	got, err := svc.GetPolicy(context.Background(), "123")
-	if err != nil || got.ID != "123" {
+	got, err := svc.GetPolicy(context.Background(), key)
+	if err != nil || got.ID != key {
 		t.Fatalf("expected cache hit, got %v, err %v", got, err)
 	}
 	if repo.called {
-		t.Fatalf("expected repo not called on cache hit")
+		t.Fatalf("expected repo not called on cache hit; cacheData=%s expiresAt=%v now=%v repo.called=%v", cacheData, expiresAt, time.Now(), repo.called)
 	}
 }
 
 func TestGetPolicy_CacheMiss(t *testing.T) {
-	p := &repository.Policy{ID: "123", UserID: "u1", Name: "n", Rules: []string{"r"}}
-	mc := &mockCache{store: map[string]string{}, expires: map[string]time.Time{}}
+	t.Parallel()
+	key := "cachemiss-123"
+	p := &repository.Policy{ID: key, UserID: "u1", Name: "n", Rules: &repository.Terminal{Type: "terminal", Op: repository.RuleOp{Type: "add", Amount: repository.RuleAmount{Neg: false, Amount: 1, Perc: false}}}}
+	mc := &mockCache{store: make(map[string]string), expires: make(map[string]time.Time)}
 	repo := &mockRepo{policy: p}
 	svc := NewPolicyService(repo, mc)
-	got, err := svc.GetPolicy(context.Background(), "123")
-	if err != nil || got.ID != "123" {
+	got, err := svc.GetPolicy(context.Background(), key)
+	if err != nil || got.ID != key {
 		t.Fatalf("expected repo hit, got %v, err %v", got, err)
 	}
 	if !repo.called {
 		t.Fatalf("expected repo called on cache miss")
 	}
 	// Should now be cached
-	cached, _, err := mc.Get(context.Background(), "123")
+	cached, _, err := mc.Get(context.Background(), key)
 	if err != nil || cached == "" {
 		t.Fatalf("expected cache to be set after miss")
+	}
+}
+
+func TestUpdatePolicy_DeletesCache(t *testing.T) {
+	t.Parallel()
+	key := "update-123"
+	p := &repository.Policy{ID: key, UserID: "u1", Name: "n", Rules: &repository.Terminal{Type: "terminal", Op: repository.RuleOp{Type: "add", Amount: repository.RuleAmount{Neg: false, Amount: 1, Perc: false}}}}
+	mc := &mockCache{store: make(map[string]string), expires: make(map[string]time.Time)}
+	mc.store[key] = "cached"
+	mc.expires[key] = time.Now().Add(1 * time.Hour)
+	repo := &mockRepo{policy: p}
+	svc := NewPolicyService(repo, mc)
+	err := svc.UpdatePolicy(context.Background(), p)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if _, ok := mc.store[key]; ok {
+		t.Fatalf("expected cache to be deleted after update")
 	}
 }

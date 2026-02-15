@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log"
 	"time"
 
 	"github.com/redis/go-redis/v9"
@@ -41,6 +42,9 @@ func NewRedisRefreshStore(ctx context.Context, cfg *RedisConnectionConfig) (*Red
 	if err := client.Ping(ctx).Err(); err != nil {
 		return nil, fmt.Errorf("redis ping failed: %w", err)
 	}
+
+	log.Println("Pinged your deployment. You successfully connected to Redis!")
+
 	return &RedisRefreshStore{Client: client, keyNS: "refresh"}, nil
 }
 

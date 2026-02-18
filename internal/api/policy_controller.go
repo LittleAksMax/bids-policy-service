@@ -3,9 +3,11 @@ package api
 import (
 	"net/http"
 
+	"github.com/LittleAksMax/bids-policy-service/internal/repository"
 	"github.com/LittleAksMax/bids-policy-service/internal/service"
 	"github.com/LittleAksMax/bids-util/requests"
 	"github.com/go-chi/chi/v5"
+	"github.com/google/uuid"
 )
 
 type PolicyController struct {
@@ -23,8 +25,9 @@ func NewPolicyController(service service.PolicyServiceInterface, claimsContextKe
 // GetPolicyHandler retrieves a single policy by ID (REST GET /policies/{id})
 func (pc *PolicyController) GetPolicyHandler(w http.ResponseWriter, r *http.Request) {
 	id := chi.URLParam(r, "id")
+	userID := r.Context().Value(uuidSubjectKey).(uuid.UUID)
 
-	policy, err := pc.service.GetPolicy(r.Context(), id)
+	policy, err := pc.service.GetPolicy(r.Context(), userID, id)
 	if err != nil {
 		requests.WriteJSON(w, http.StatusInternalServerError, requests.APIResponse{
 			Success: false,
@@ -49,18 +52,18 @@ func (pc *PolicyController) GetPolicyHandler(w http.ResponseWriter, r *http.Requ
 
 // ListPoliciesHandler lists all policies for the user's marketplace (REST GET /policies)
 func (pc *PolicyController) ListPoliciesHandler(w http.ResponseWriter, r *http.Request) {
+	userID := r.Context().Value(uuidSubjectKey).(uuid.UUID)
 	// Get marketplace from query parameter
 	marketplace := r.URL.Query().Get("marketplace")
 
-	var policies interface{}
-	var err error
-
+	var policies []*repository.Policy
+	var err error = nil
 	if marketplace != "" {
 		// Filter by marketplace
-		policies, err = pc.service.ListPoliciesByMarketplace(r.Context(), marketplace)
+		policies, err = pc.service.ListPoliciesByMarketplace(r.Context(), userID, marketplace)
 	} else {
 		// List all policies
-		policies, err = pc.service.ListPolicies(r.Context())
+		policies, err = pc.service.ListPolicies(r.Context(), userID)
 	}
 
 	if err != nil {
@@ -79,8 +82,7 @@ func (pc *PolicyController) ListPoliciesHandler(w http.ResponseWriter, r *http.R
 
 // CreatePolicyHandler creates a new policy (REST POST /policies)
 func (pc *PolicyController) CreatePolicyHandler(w http.ResponseWriter, r *http.Request) {
-	// Extract claims from context (guaranteed by middleware)
-	claims := r.Context().Value(pc.claimsContextKey).(*requests.Claims)
+	userID := r.Context().Value(uuidSubjectKey).(uuid.UUID)
 
 	// Get the validated request from context
 	createReq := GetRequestBody[CreatePolicyRequest](r)
@@ -93,7 +95,7 @@ func (pc *PolicyController) CreatePolicyHandler(w http.ResponseWriter, r *http.R
 	}
 
 	// Convert request DTO to Policy model with user ID from claims
-	policy, err := createReq.ToPolicy(claims.Subject)
+	policy, err := createReq.ToPolicy(userID)
 	if err != nil {
 		requests.WriteJSON(w, http.StatusBadRequest, requests.APIResponse{
 			Success: false,
@@ -121,9 +123,7 @@ func (pc *PolicyController) CreatePolicyHandler(w http.ResponseWriter, r *http.R
 // UpdatePolicyHandler updates an existing policy (REST PUT /policies/{id})
 func (pc *PolicyController) UpdatePolicyHandler(w http.ResponseWriter, r *http.Request) {
 	id := chi.URLParam(r, "id")
-
-	// Extract claims from context (guaranteed by middleware)
-	claims := r.Context().Value(pc.claimsContextKey).(*requests.Claims)
+	userID := r.Context().Value(uuidSubjectKey).(uuid.UUID)
 
 	// Get the validated request from context
 	updateReq := GetRequestBody[UpdatePolicyRequest](r)
@@ -136,7 +136,7 @@ func (pc *PolicyController) UpdatePolicyHandler(w http.ResponseWriter, r *http.R
 	}
 
 	// Convert request DTO to Policy model
-	policy, err := updateReq.ToPolicy(id, claims.Subject)
+	policy, err := updateReq.ToPolicy(id, userID)
 	if err != nil {
 		requests.WriteJSON(w, http.StatusBadRequest, requests.APIResponse{
 			Success: false,
@@ -146,7 +146,7 @@ func (pc *PolicyController) UpdatePolicyHandler(w http.ResponseWriter, r *http.R
 	}
 
 	// Fetch existing policy to preserve immutable fields
-	existing, err := pc.service.GetPolicy(r.Context(), id)
+	existing, err := pc.service.GetPolicy(r.Context(), userID, id)
 	if err != nil {
 		requests.WriteJSON(w, http.StatusInternalServerError, requests.APIResponse{
 			Success: false,
@@ -169,7 +169,7 @@ func (pc *PolicyController) UpdatePolicyHandler(w http.ResponseWriter, r *http.R
 	policy.Type = existing.Type
 
 	// Update policy in service
-	err = pc.service.UpdatePolicy(r.Context(), policy)
+	err = pc.service.UpdatePolicy(r.Context(), userID, policy)
 	if err != nil {
 		requests.WriteJSON(w, http.StatusInternalServerError, requests.APIResponse{
 			Success: false,
@@ -187,13 +187,14 @@ func (pc *PolicyController) UpdatePolicyHandler(w http.ResponseWriter, r *http.R
 // DeletePolicyHandler deletes a policy (REST DELETE /policies/{id})
 func (pc *PolicyController) DeletePolicyHandler(w http.ResponseWriter, r *http.Request) {
 	id := chi.URLParam(r, "id")
+	userID := r.Context().Value(uuidSubjectKey).(uuid.UUID)
 
 	// Verify policy exists
-	existing, err := pc.service.GetPolicy(r.Context(), id)
+	existing, err := pc.service.GetPolicy(r.Context(), userID, id)
 	if err != nil {
 		requests.WriteJSON(w, http.StatusInternalServerError, requests.APIResponse{
 			Success: false,
-			Error:   "failed to retrieve policy",
+			Error:   "failed to delete policy",
 		})
 		return
 	}
@@ -207,7 +208,7 @@ func (pc *PolicyController) DeletePolicyHandler(w http.ResponseWriter, r *http.R
 	}
 
 	// Delete policy
-	err = pc.service.DeletePolicy(r.Context(), id)
+	err = pc.service.DeletePolicy(r.Context(), userID, id)
 	if err != nil {
 		requests.WriteJSON(w, http.StatusInternalServerError, requests.APIResponse{
 			Success: false,

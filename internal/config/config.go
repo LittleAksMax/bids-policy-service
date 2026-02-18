@@ -10,11 +10,12 @@ import (
 )
 
 type AuthConfig struct {
-	SharedSecret    string
-	MaxSkew         time.Duration
-	ClaimsHeader    string
-	TimestampHeader string
-	SignatureHeader string
+	AccessTokenSecret string
+	SharedSecret      string
+	MaxSkew           time.Duration
+	ClaimsHeader      string
+	TimestampHeader   string
+	SignatureHeader   string
 }
 
 type Config struct {
@@ -35,11 +36,12 @@ func Load() (cfg *Config, err error) {
 		Port:           env.ReadPort("PORT"),
 		AllowedOrigins: env.GetStrListFromEnv("ALLOWED_ORIGINS"),
 		Auth: &AuthConfig{
-			SharedSecret:    env.GetStrFromEnv("X_AUTH_SIG_SECRET"),
-			MaxSkew:         env.ParseDurationEnv("MAX_SKEW"),
-			ClaimsHeader:    env.GetStrFromEnv("CLAIMS_HEADER"),
-			TimestampHeader: env.GetStrFromEnv("CLAIMS_HEADER"),
-			SignatureHeader: env.GetStrFromEnv("SIGNATURE_HEADER"),
+			AccessTokenSecret: env.GetStrFromEnv("ACCESS_TOKEN_SECRET"),
+			SharedSecret:      env.GetStrFromEnv("X_AUTH_SIG_SECRET"),
+			MaxSkew:           env.ParseDurationEnv("MAX_SKEW"),
+			ClaimsHeader:      env.GetStrFromEnv("CLAIMS_HEADER"),
+			TimestampHeader:   env.GetStrFromEnv("TIMESTAMP_HEADER"),
+			SignatureHeader:   env.GetStrFromEnv("SIGNATURE_HEADER"),
 		},
 		PolicyDB: &db.MongoConnectionConfig{
 			Host:     env.GetStrFromEnv("MONGO_HOST"),

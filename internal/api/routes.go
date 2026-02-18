@@ -42,6 +42,8 @@ func Health(checkers map[string]health.HealthChecker) http.HandlerFunc {
 	}
 }
 
+const uuidSubjectKey = "uuidSubject"
+
 // RegisterRoutes registers all endpoint handlers using the controller methods.
 func RegisterRoutes(r chi.Router, pc *PolicyController, healthCheckers map[string]health.HealthChecker, authCfg *config.AuthConfig) {
 	// Health
@@ -49,13 +51,20 @@ func RegisterRoutes(r chi.Router, pc *PolicyController, healthCheckers map[strin
 
 	// Register policy routes with AuthMiddleware
 	r.Route("/policies", func(r chi.Router) {
-		r.Use(requests.ValidateAccessToken(
-			[]byte(authCfg.SharedSecret),
-			authCfg.MaxSkew,
-			authCfg.ClaimsHeader,
-			authCfg.TimestampHeader,
-			authCfg.SignatureHeader,
-		))
+		r.Use(
+			requests.ValidateAccessToken(
+				authCfg.SharedSecret,
+				authCfg.AccessTokenSecret,
+				authCfg.MaxSkew,
+				authCfg.ClaimsHeader,
+				authCfg.TimestampHeader,
+				authCfg.SignatureHeader,
+			),
+			requests.EnsureValidSubject(
+				authCfg.ClaimsHeader,
+				uuidSubjectKey,
+			),
+		)
 		r.Get("/", pc.ListPoliciesHandler)
 		r.With(ValidateRequest[CreatePolicyRequest]()).Post("/", pc.CreatePolicyHandler)
 		r.Get("/{id}", pc.GetPolicyHandler)

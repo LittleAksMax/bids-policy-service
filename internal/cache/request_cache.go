@@ -10,7 +10,7 @@ import (
 // RequestCache is a key-value store for caching web requests for policies.
 type RequestCache interface {
 	health.HealthChecker
-	Save(ctx context.Context, key string, value string, expiresAt time.Time) error
+	Set(ctx context.Context, key string, value string, expiresIn time.Duration) error
 	Get(ctx context.Context, key string) (value string, expiresAt time.Time, err error)
 	Delete(ctx context.Context, key string) error
 }

@@ -1,25 +1,27 @@
 package repository
 
+import "go.mongodb.org/mongo-driver/bson/primitive"
+
 type RuleNode interface {
-	isRuleNode()
+	IsRuleNode()
 }
 
 const (
-	terminalType  = "terminal"
-	conditionType = "condition"
+	TerminalType  = "terminal"
+	ConditionType = "condition"
 )
 
 func IsValidRuleNodeType(t string) bool {
-	return t == terminalType || t == conditionType
+	return t == TerminalType || t == ConditionType
 }
 
 const (
-	opAdd = "add"
-	opMul = "mul"
+	OpAdd = "add"
+	OpMul = "mul"
 )
 
 func IsValidRuleOpType(t string) bool {
-	return t == opAdd || t == opMul
+	return t == OpAdd || t == OpMul
 }
 
 const (
@@ -34,11 +36,6 @@ const (
 	RoAS        = "roas"
 )
 
-const (
-	NestedRuleType = "nested"
-)
-
-// NOTE: can use binary search to optimise eventually
 func IsValidVariable(v string) bool {
 	switch v {
 	case Impressions, Clicks, CTR, Spend, CPC, Orders, Sales, ACoS, RoAS:
@@ -48,40 +45,73 @@ func IsValidVariable(v string) bool {
 	}
 }
 
-type Condition struct {
-	Type     string   `bson:"type"` // "condition"
-	Variable string   `bson:"variable"`
-	Min      float64  `bson:"min"`
-	Max      float64  `bson:"max"`
-	If       RuleNode `bson:"if"`
-	Else     RuleNode `bson:"else"`
+const (
+	NestedRuleType = "nested"
+)
+
+func IsValidRuleType(t string) bool {
+	switch t {
+	case NestedRuleType:
+		return true
+	default:
+		return false
+	}
 }
 
-func (*Condition) isRuleNode() {}
+type Condition struct {
+	Type     string   `bson:"type" json:"type"` // "condition"
+	Variable string   `bson:"variable" json:"variable"`
+	Min      float64  `bson:"min" json:"min"`
+	Max      float64  `bson:"max" json:"max"`
+	If       RuleNode `bson:"if" json:"if"`
+	Else     RuleNode `bson:"else" json:"else"`
+}
+
+func (*Condition) IsRuleNode() {}
 
 type Terminal struct {
-	Type string `bson:"type"` // "terminal"
-	Op   RuleOp `bson:"op"`
+	Type string `bson:"type" json:"type"` // "terminal"
+	Op   RuleOp `bson:"op" json:"op"`
 }
 
-func (*Terminal) isRuleNode() {}
+func (*Terminal) IsRuleNode() {}
 
 type RuleOp struct {
-	Type   string     `bson:"type"` // "add" or "mul"
-	Amount RuleAmount `bson:"amount"`
+	Type   string     `bson:"type" json:"type"` // "add" or "mul"
+	Amount RuleAmount `bson:"amount" json:"amount"`
 }
 
 type RuleAmount struct {
-	Neg    bool    `bson:"neg"`
-	Amount float64 `bson:"amount"`
-	Perc   bool    `bson:"perc"`
+	Neg    bool    `bson:"neg" json:"neg"`
+	Amount float64 `bson:"amount" json:"amount"`
+	Perc   bool    `bson:"perc" json:"perc"`
 }
 
 type Policy struct {
-	ID          string   `bson:"_id,omitempty"`
-	UserID      string   `bson:"user_id"`
-	Marketplace string   `bson:"marketplace"`
-	Name        string   `bson:"name"`
-	Type        string   `bson:"type"`
-	Rules       RuleNode `bson:"rules"`
+	ID          primitive.ObjectID `bson:"_id,omitempty" json:"id,omitempty"`
+	UserID      string             `bson:"user_id" json:"user_id"`
+	Marketplace string             `bson:"marketplace" json:"marketplace"`
+	Name        string             `bson:"name" json:"name"`
+	Type        string             `bson:"type" json:"type"`
+	Rules       RuleNode           `bson:"rules" json:"rules"`
+}
+
+const (
+	MpUK = "UK"
+	MpDE = "DE"
+	MpFR = "FR"
+	MpIT = "IT"
+	MpES = "ES"
+	MpUS = "US"
+	MpCA = "CA"
+	MpMX = "MX"
+)
+
+func IsValidMarketplace(marketplace string) bool {
+	switch marketplace {
+	case MpUK, MpDE, MpFR, MpIT, MpES, MpUS, MpCA, MpMX:
+		return true
+	default:
+		return false
+	}
 }

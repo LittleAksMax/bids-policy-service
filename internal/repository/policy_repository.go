@@ -3,19 +3,21 @@ package repository
 import (
 	"context"
 	"errors"
+	"log"
 
+	"github.com/google/uuid"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 )
 
 type PolicyRepository interface {
-	GetPolicy(ctx context.Context, id string) (*Policy, error)
+	GetPolicy(ctx context.Context, userID uuid.UUID, id string) (*Policy, error)
 	CreatePolicy(ctx context.Context, p *Policy) error
-	ListPolicies(ctx context.Context) ([]*Policy, error)
-	ListPoliciesByMarketplace(ctx context.Context, marketplace string) ([]*Policy, error)
-	UpdatePolicy(ctx context.Context, p *Policy) error
-	DeletePolicy(ctx context.Context, id string) error
+	ListPolicies(ctx context.Context, userID uuid.UUID) ([]*Policy, error)
+	ListPoliciesByMarketplace(ctx context.Context, userID uuid.UUID, marketplace string) ([]*Policy, error)
+	UpdatePolicy(ctx context.Context, userID uuid.UUID, p *Policy) error
+	DeletePolicy(ctx context.Context, userID uuid.UUID, id string) error
 }
 
 type MongoPolicyRepository struct {
@@ -26,13 +28,13 @@ func NewMongoPolicyRepository(db *mongo.Database) *MongoPolicyRepository {
 	return &MongoPolicyRepository{coll: db.Collection("policies")}
 }
 
-func (r *MongoPolicyRepository) GetPolicy(ctx context.Context, id string) (*Policy, error) {
+func (r *MongoPolicyRepository) GetPolicy(ctx context.Context, userID uuid.UUID, id string) (*Policy, error) {
 	objID, err := primitive.ObjectIDFromHex(id)
 	if err != nil {
 		return nil, errors.New("invalid policy id")
 	}
 	var policy Policy
-	filter := bson.M{"_id": objID}
+	filter := bson.M{"_id": objID, "user_id": userID.String()}
 	err = r.coll.FindOne(ctx, filter).Decode(&policy)
 	if errors.Is(err, mongo.ErrNoDocuments) {
 		return nil, nil
@@ -49,17 +51,22 @@ func (r *MongoPolicyRepository) CreatePolicy(ctx context.Context, p *Policy) err
 		return err
 	}
 	if oid, ok := res.InsertedID.(primitive.ObjectID); ok {
-		p.ID = oid.Hex()
+		p.ID = oid
 	}
 	return nil
 }
 
-func (r *MongoPolicyRepository) ListPolicies(ctx context.Context) ([]*Policy, error) {
-	cur, err := r.coll.Find(ctx, bson.M{})
+func (r *MongoPolicyRepository) ListPolicies(ctx context.Context, userID uuid.UUID) ([]*Policy, error) {
+	cur, err := r.coll.Find(ctx, bson.M{"user_id": userID.String()})
 	if err != nil {
 		return nil, err
 	}
-	defer cur.Close(ctx)
+	defer func(cur *mongo.Cursor, ctx context.Context) {
+		err := cur.Close(ctx)
+		if err != nil {
+			log.Printf("failed to close cursor: %v\n", err)
+		}
+	}(cur, ctx)
 	policies := make([]*Policy, 0)
 	if err := cur.All(ctx, &policies); err != nil {
 		return nil, err
@@ -68,12 +75,17 @@ func (r *MongoPolicyRepository) ListPolicies(ctx context.Context) ([]*Policy, er
 }
 
 // ListPoliciesByMarketplace retrieves all policies for a specific marketplace.
-func (r *MongoPolicyRepository) ListPoliciesByMarketplace(ctx context.Context, marketplace string) ([]*Policy, error) {
-	cur, err := r.coll.Find(ctx, bson.M{"marketplace": marketplace})
+func (r *MongoPolicyRepository) ListPoliciesByMarketplace(ctx context.Context, userID uuid.UUID, marketplace string) ([]*Policy, error) {
+	cur, err := r.coll.Find(ctx, bson.M{"user_id": userID.String(), "marketplace": marketplace})
 	if err != nil {
 		return nil, err
 	}
-	defer cur.Close(ctx)
+	defer func(cur *mongo.Cursor, ctx context.Context) {
+		err := cur.Close(ctx)
+		if err != nil {
+			log.Printf("failed to close cursor: %v\n", err)
+		}
+	}(cur, ctx)
 	policies := make([]*Policy, 0)
 	if err := cur.All(ctx, &policies); err != nil {
 		return nil, err
@@ -82,12 +94,12 @@ func (r *MongoPolicyRepository) ListPoliciesByMarketplace(ctx context.Context, m
 }
 
 // DeletePolicy deletes a policy by its ID.
-func (r *MongoPolicyRepository) DeletePolicy(ctx context.Context, id string) error {
+func (r *MongoPolicyRepository) DeletePolicy(ctx context.Context, userID uuid.UUID, id string) error {
 	objID, err := primitive.ObjectIDFromHex(id)
 	if err != nil {
 		return errors.New("invalid policy id")
 	}
-	filter := bson.M{"_id": objID}
+	filter := bson.M{"_id": objID, "user_id": userID.String()}
 	res, err := r.coll.DeleteOne(ctx, filter)
 	if err != nil {
 		return err
@@ -98,16 +110,11 @@ func (r *MongoPolicyRepository) DeletePolicy(ctx context.Context, id string) err
 	return nil
 }
 
-func (r *MongoPolicyRepository) UpdatePolicy(ctx context.Context, p *Policy) error {
-	objID, err := primitive.ObjectIDFromHex(p.ID)
-	if err != nil {
-		return errors.New("invalid policy id")
-	}
-	filter := bson.M{"_id": objID}
+func (r *MongoPolicyRepository) UpdatePolicy(ctx context.Context, userID uuid.UUID, p *Policy) error {
+	filter := bson.M{"_id": p.ID, "user_id": userID.String()}
 	update := bson.M{"$set": bson.M{
-		"user_id": p.UserID,
-		"name":    p.Name,
-		"rules":   p.Rules,
+		"name":  p.Name,
+		"rules": p.Rules,
 	}}
 	res, err := r.coll.UpdateOne(ctx, filter, update)
 	if err != nil {

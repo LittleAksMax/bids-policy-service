@@ -13,7 +13,7 @@ require (
 )
 
 require (
-	github.com/LittleAksMax/bids-util v0.0.6-0.20260214170252-378b9589d21b // indirect
+	github.com/LittleAksMax/bids-util v0.0.6-0.20260215223529-879aca080910 // indirect
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
 	github.com/dgryski/go-rendezvous v0.0.0-20200823014737-9f7001d12a5f // indirect
 	github.com/go-chi/cors v1.2.2 // indirect
@@ -29,3 +29,5 @@ require (
 	golang.org/x/sync v0.19.0 // indirect
 	golang.org/x/text v0.33.0 // indirect
 )
+
+replace github.com/LittleAksMax/bids-util => ../bids-util

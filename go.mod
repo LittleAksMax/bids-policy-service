@@ -5,6 +5,7 @@ go 1.24.11
 toolchain go1.24.12
 
 require (
+	github.com/LittleAksMax/bids-util v0.0.6-0.20260218173913-01f4995c0cfd
 	github.com/go-chi/chi/v5 v5.2.5
 	github.com/google/uuid v1.6.0
 	github.com/joho/godotenv v1.5.1
@@ -13,7 +14,6 @@ require (
 )
 
 require (
-	github.com/LittleAksMax/bids-util v0.0.6-0.20260215223529-879aca080910 // indirect
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
 	github.com/dgryski/go-rendezvous v0.0.0-20200823014737-9f7001d12a5f // indirect
 	github.com/go-chi/cors v1.2.2 // indirect
@@ -29,5 +29,3 @@ require (
 	golang.org/x/sync v0.19.0 // indirect
 	golang.org/x/text v0.33.0 // indirect
 )
-
-replace github.com/LittleAksMax/bids-util => ../bids-util

@@ -1,7 +1,5 @@
-github.com/LittleAksMax/bids-util v0.0.6-0.20260215201006-f9d3290919de h1:jgBg4wQWTLV494savNA741BDocZrf8FNJ3a78tVx2bg=
-github.com/LittleAksMax/bids-util v0.0.6-0.20260215201006-f9d3290919de/go.mod h1:tn/An06/EE00vfOmEmuB6ti8D44On9uf06uGiI6IUH4=
-github.com/LittleAksMax/bids-util v0.0.6-0.20260215223529-879aca080910 h1:njNw3IHMlwl0hiJlM03D9m0rU8M1tkoH3qYt/IZ/NhA=
-github.com/LittleAksMax/bids-util v0.0.6-0.20260215223529-879aca080910/go.mod h1:tn/An06/EE00vfOmEmuB6ti8D44On9uf06uGiI6IUH4=
+github.com/LittleAksMax/bids-util v0.0.6-0.20260218173913-01f4995c0cfd h1:wJWh1NDPSB4BBVlbLuMc9m3HPdp1TrnN0byOd2HwbJI=
+github.com/LittleAksMax/bids-util v0.0.6-0.20260218173913-01f4995c0cfd/go.mod h1:8Hup3ATpBOUX8de/nALAVS/DgovuZJfgbzFmR2Ic6YI=
 github.com/bsm/ginkgo/v2 v2.12.0 h1:Ny8MWAHyOepLGlLKYmXG4IEkioBysk6GpaRTLC8zwWs=
 github.com/bsm/ginkgo/v2 v2.12.0/go.mod h1:SwYbGRRDovPVboqFv0tPTcG1sN61LM1Z4ARdbAV9g4c=
 github.com/bsm/gomega v1.27.10 h1:yeMWxP2pV2fG3FgAODIY8EiRE3dy0aeFYt4l7wh6yKA=

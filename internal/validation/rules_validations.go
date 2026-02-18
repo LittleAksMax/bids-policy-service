@@ -23,12 +23,7 @@ type conditionDTO struct {
 	Else     json.RawMessage `json:"else"`
 }
 
-func UnmarshalRuleNodeRequest(data []byte) (repository.RuleNode, error) {
-	// null-safe
-	if string(data) == "null" {
-		return nil, nil
-	}
-
+func UnmarshalRuleNodeJSON(data []byte) (repository.RuleNode, error) {
 	var h nodeHeader
 	if err := json.Unmarshal(data, &h); err != nil {
 		return nil, err
@@ -52,14 +47,14 @@ func UnmarshalRuleNodeRequest(data []byte) (repository.RuleNode, error) {
 			return nil, err
 		}
 
-		ifNode, err := UnmarshalRuleNodeRequest(dto.If)
+		ifNode, err := UnmarshalRuleNodeJSON(dto.If)
 		if err != nil {
 			return nil, fmt.Errorf("if->%w", err)
 		}
 		if ifNode == nil {
 			return nil, fmt.Errorf("if->node is nil")
 		}
-		elseNode, err := UnmarshalRuleNodeRequest(dto.Else)
+		elseNode, err := UnmarshalRuleNodeJSON(dto.Else)
 		if err != nil {
 			return nil, fmt.Errorf("else->%w", err)
 		}
@@ -89,7 +84,7 @@ func UnmarshalRuleNodeRequest(data []byte) (repository.RuleNode, error) {
 
 // ValidateRules checks fields with validate:"rules" contain valid JSON for a rule node.
 // Special-case: if the field is missing or empty, return a RequiredValidationError for "rules".
-// Otherwise, propagate specific errors from UnmarshalRuleNodeRequest (type, shape, recursion, etc.).
+// Otherwise, propagate specific errors from UnmarshalRuleNodeJSON (type, shape, recursion, etc.).
 func ValidateRules(v interface{}) error {
 	val := reflect.ValueOf(v)
 	if val.Kind() == reflect.Ptr {
@@ -113,7 +108,7 @@ func ValidateRules(v interface{}) error {
 				return &RequiredValidationError{validationError{Fields: []string{"rules"}}}
 			}
 			// Propagate specific validation errors from unmarshal/recursive validation
-			if _, err := UnmarshalRuleNodeRequest(b); err != nil {
+			if _, err := UnmarshalRuleNodeJSON(b); err != nil {
 				return err
 			}
 		} else {

@@ -1,10 +1,12 @@
 package api
 
 import (
+	"fmt"
 	"net/http"
 
 	"github.com/LittleAksMax/bids-policy-service/internal/repository"
 	"github.com/LittleAksMax/bids-policy-service/internal/service"
+	"github.com/LittleAksMax/bids-policy-service/internal/validation"
 	"github.com/LittleAksMax/bids-util/requests"
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
@@ -135,45 +137,28 @@ func (pc *PolicyController) UpdatePolicyHandler(w http.ResponseWriter, r *http.R
 		return
 	}
 
-	// Convert request DTO to Policy model
-	policy, err := updateReq.ToPolicy(id, userID)
+	newRules, err := validation.UnmarshalRuleNodeJSON(updateReq.Rules)
 	if err != nil {
 		requests.WriteJSON(w, http.StatusBadRequest, requests.APIResponse{
 			Success: false,
-			Error:   "invalid policy data: " + err.Error(),
+			Error:   fmt.Sprintf("invalid rules format: %v", err.Error()),
 		})
-		return
 	}
-
-	// Fetch existing policy to preserve immutable fields
-	existing, err := pc.service.GetPolicy(r.Context(), userID, id)
-	if err != nil {
-		requests.WriteJSON(w, http.StatusInternalServerError, requests.APIResponse{
-			Success: false,
-			Error:   "failed to retrieve existing policy",
-		})
-		return
-	}
-
-	if existing == nil {
-		requests.WriteJSON(w, http.StatusNotFound, requests.APIResponse{
-			Success: false,
-			Error:   "policy not found",
-		})
-		return
-	}
-
-	// Ensure immutable fields are preserved
-	policy.UserID = existing.UserID
-	policy.Marketplace = existing.Marketplace
-	policy.Type = existing.Type
 
 	// Update policy in service
-	err = pc.service.UpdatePolicy(r.Context(), userID, policy)
+	policy, err := pc.service.UpdatePolicy(r.Context(), userID, id, updateReq.Name, newRules)
 	if err != nil {
 		requests.WriteJSON(w, http.StatusInternalServerError, requests.APIResponse{
 			Success: false,
 			Error:   "failed to update policy",
+		})
+		return
+	}
+
+	if policy == nil {
+		requests.WriteJSON(w, http.StatusNotFound, requests.APIResponse{
+			Success: false,
+			Error:   "policy not found",
 		})
 		return
 	}
@@ -189,8 +174,8 @@ func (pc *PolicyController) DeletePolicyHandler(w http.ResponseWriter, r *http.R
 	id := chi.URLParam(r, "id")
 	userID := r.Context().Value(uuidSubjectKey).(uuid.UUID)
 
-	// Verify policy exists
-	existing, err := pc.service.GetPolicy(r.Context(), userID, id)
+	// Delete policy
+	ok, err := pc.service.DeletePolicy(r.Context(), userID, id)
 	if err != nil {
 		requests.WriteJSON(w, http.StatusInternalServerError, requests.APIResponse{
 			Success: false,
@@ -198,21 +183,10 @@ func (pc *PolicyController) DeletePolicyHandler(w http.ResponseWriter, r *http.R
 		})
 		return
 	}
-
-	if existing == nil {
+	if !ok {
 		requests.WriteJSON(w, http.StatusNotFound, requests.APIResponse{
 			Success: false,
 			Error:   "policy not found",
-		})
-		return
-	}
-
-	// Delete policy
-	err = pc.service.DeletePolicy(r.Context(), userID, id)
-	if err != nil {
-		requests.WriteJSON(w, http.StatusInternalServerError, requests.APIResponse{
-			Success: false,
-			Error:   "failed to delete policy",
 		})
 		return
 	}

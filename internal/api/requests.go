@@ -25,7 +25,7 @@ type CreatePolicyRequest struct {
 
 // ToPolicy now takes userID as a parameter
 func (r *CreatePolicyRequest) ToPolicy(userID uuid.UUID) (*repository.Policy, error) {
-	ruleNode, err := validation.UnmarshalRuleNodeRequest(r.Rules)
+	ruleNode, err := validation.UnmarshalRuleNodeJSON(r.Rules)
 	if err != nil {
 		return nil, err
 	}
@@ -43,7 +43,7 @@ func (r *CreatePolicyRequest) ToPolicy(userID uuid.UUID) (*repository.Policy, er
 // Only Name and Rule can be updated; UserID, Marketplace, and Type are immutable
 type UpdatePolicyRequest struct {
 	Name  string          `json:"name" validate:"required"`
-	Rules json.RawMessage `json:"rule" validate:"required,rules"`
+	Rules json.RawMessage `json:"rules" validate:"required,rules"`
 }
 
 func (r *UpdatePolicyRequest) ToPolicy(id string, userID uuid.UUID) (*repository.Policy, error) {
@@ -51,7 +51,7 @@ func (r *UpdatePolicyRequest) ToPolicy(id string, userID uuid.UUID) (*repository
 	if err != nil {
 		return nil, err
 	}
-	ruleNode, err := validation.UnmarshalRuleNodeRequest(r.Rules)
+	ruleNode, err := validation.UnmarshalRuleNodeJSON(r.Rules)
 	if err != nil {
 		return nil, err
 	}

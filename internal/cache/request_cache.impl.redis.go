@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log"
 	"time"
 
 	"github.com/redis/go-redis/v9"
@@ -39,8 +40,15 @@ func NewRedisRefreshStore(ctx context.Context, cfg *RedisConnectionConfig) (*Red
 	ctx, cancel := context.WithTimeout(ctx, 3*time.Second)
 	defer cancel()
 	if err := client.Ping(ctx).Err(); err != nil {
+		err := client.Close()
+		if err != nil {
+			return nil, err
+		}
 		return nil, fmt.Errorf("redis ping failed: %w", err)
 	}
+
+	log.Println("Pinged your deployment. You successfully connected to Redis!")
+
 	return &RedisRefreshStore{Client: client, keyNS: "refresh"}, nil
 }
 
@@ -48,18 +56,14 @@ func (s *RedisRefreshStore) buildKey(token string) string {
 	return s.keyNS + ":" + token
 }
 
-// Save stores the refresh token with TTL derived from expiresAt.
-func (s *RedisRefreshStore) Save(ctx context.Context, token string, userID string, expiresAt time.Time) error {
+// Set stores the refresh token with TTL.
+func (s *RedisRefreshStore) Set(ctx context.Context, token string, userID string, expiresIn time.Duration) error {
 	if token == "" || userID == "" {
 		return errors.New("token and userID required")
 	}
-	ttl := time.Until(expiresAt)
-	if ttl <= 0 {
-		return errors.New("expiresAt must be in the future")
-	}
 	key := s.buildKey(token)
 	// Store userID as value; expiration managed by Redis.
-	return s.Client.Set(ctx, key, userID, ttl).Err()
+	return s.Client.Set(ctx, key, userID, expiresIn).Err()
 }
 
 // Get retrieves the userID and calculates expiresAt using TTL.

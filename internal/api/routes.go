@@ -3,7 +3,9 @@ package api
 import (
 	"net/http"
 
+	"github.com/LittleAksMax/bids-policy-service/internal/config"
 	"github.com/LittleAksMax/bids-policy-service/internal/health"
+	"github.com/LittleAksMax/bids-util/requests"
 	"github.com/go-chi/chi/v5"
 )
 
@@ -33,23 +35,40 @@ func Health(checkers map[string]health.HealthChecker) http.HandlerFunc {
 			statusCode = http.StatusServiceUnavailable
 		}
 
-		writeJSON(w, statusCode, apiResponse{
+		requests.WriteJSON(w, statusCode, requests.APIResponse{
 			Success: true,
 			Data:    statuses,
 		})
 	}
 }
 
+const uuidSubjectKey = "uuidSubject"
+
 // RegisterRoutes registers all endpoint handlers using the controller methods.
-func RegisterRoutes(r chi.Router, pc *PolicyController, healthCheckers map[string]health.HealthChecker) {
+func RegisterRoutes(r chi.Router, pc *PolicyController, healthCheckers map[string]health.HealthChecker, authCfg *config.AuthConfig) {
 	// Health
 	r.Get("/health", Health(healthCheckers))
 
-	// Register policy routes
+	// Register policy routes with AuthMiddleware
 	r.Route("/policies", func(r chi.Router) {
+		r.Use(
+			requests.ValidateAccessToken(
+				authCfg.SharedSecret,
+				authCfg.AccessTokenSecret,
+				authCfg.MaxSkew,
+				authCfg.ClaimsHeader,
+				authCfg.TimestampHeader,
+				authCfg.SignatureHeader,
+			),
+			requests.EnsureValidSubject(
+				authCfg.ClaimsHeader,
+				uuidSubjectKey,
+			),
+		)
 		r.Get("/", pc.ListPoliciesHandler)
 		r.With(ValidateRequest[CreatePolicyRequest]()).Post("/", pc.CreatePolicyHandler)
 		r.Get("/{id}", pc.GetPolicyHandler)
 		r.With(ValidateRequest[UpdatePolicyRequest]()).Put("/{id}", pc.UpdatePolicyHandler)
+		r.Delete("/{id}", pc.DeletePolicyHandler)
 	})
 }

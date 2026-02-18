@@ -2,9 +2,12 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"log"
+	"net/http"
 	"os"
 
+	"github.com/LittleAksMax/bids-policy-service/internal/api"
 	"github.com/LittleAksMax/bids-policy-service/internal/cache"
 	"github.com/LittleAksMax/bids-policy-service/internal/config"
 	"github.com/LittleAksMax/bids-policy-service/internal/db"
@@ -20,6 +23,7 @@ func main() {
 	// Load development override file BEFORE config parsing if MODE indicates development.
 	mode := os.Getenv("MODE")
 	if mode != ModeDevelopment && mode != ModeProduction {
+		log.Fatalf("Unknown mode: '%s'", mode)
 	}
 	if mode == ModeDevelopment {
 		if err := godotenv.Load(".env.Dev"); err != nil {
@@ -53,4 +57,13 @@ func main() {
 			log.Printf("redis close error: %v", err)
 		}
 	}()
+
+	r := api.NewRouter(cfg, dbCfg, cacheCfg)
+	addr := fmt.Sprintf(":%d", cfg.Port)
+
+	log.Printf("starting server on %s (mode=%s)", addr, mode)
+	if err := http.ListenAndServe(addr, r); err != nil {
+		log.Printf("server stopped: %v", err)
+		os.Exit(1)
+	}
 }

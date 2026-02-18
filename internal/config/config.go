@@ -2,15 +2,28 @@ package config
 
 import (
 	"errors"
+	"time"
 
 	"github.com/LittleAksMax/bids-policy-service/internal/cache"
 	"github.com/LittleAksMax/bids-policy-service/internal/db"
+	"github.com/LittleAksMax/bids-util/env"
 )
 
+type AuthConfig struct {
+	AccessTokenSecret string
+	SharedSecret      string
+	MaxSkew           time.Duration
+	ClaimsHeader      string
+	TimestampHeader   string
+	SignatureHeader   string
+}
+
 type Config struct {
-	Port        int
-	PolicyDB    *db.MongoConnectionConfig
-	PolicyCache *cache.RedisConnectionConfig
+	Port           int
+	AllowedOrigins []string
+	Auth           *AuthConfig
+	PolicyDB       *db.MongoConnectionConfig
+	PolicyCache    *cache.RedisConnectionConfig
 }
 
 func Load() (cfg *Config, err error) {
@@ -20,18 +33,27 @@ func Load() (cfg *Config, err error) {
 		}
 	}()
 	return &Config{
-		Port: readPort("PORT"),
+		Port:           env.ReadPort("PORT"),
+		AllowedOrigins: env.GetStrListFromEnv("ALLOWED_ORIGINS"),
+		Auth: &AuthConfig{
+			AccessTokenSecret: env.GetStrFromEnv("ACCESS_TOKEN_SECRET"),
+			SharedSecret:      env.GetStrFromEnv("X_AUTH_SIG_SECRET"),
+			MaxSkew:           env.ParseDurationEnv("MAX_SKEW"),
+			ClaimsHeader:      env.GetStrFromEnv("CLAIMS_HEADER"),
+			TimestampHeader:   env.GetStrFromEnv("TIMESTAMP_HEADER"),
+			SignatureHeader:   env.GetStrFromEnv("SIGNATURE_HEADER"),
+		},
 		PolicyDB: &db.MongoConnectionConfig{
-			Host:     getStrFromEnv("MONGO_HOST"),
-			Port:     readPort("MONGO_PORT"),
-			User:     getStrFromEnv("MONGO_USERNAME"),
-			Passwd:   getStrFromEnv("MONGO_PASSWORD"),
-			Database: getStrFromEnv("MONGO_DATABASE"),
+			Host:     env.GetStrFromEnv("MONGO_HOST"),
+			Port:     env.ReadPort("MONGO_PORT"),
+			User:     env.GetStrFromEnv("MONGO_USERNAME"),
+			Passwd:   env.GetStrFromEnv("MONGO_PASSWORD"),
+			Database: env.GetStrFromEnv("MONGO_DATABASE"),
 		},
 		PolicyCache: &cache.RedisConnectionConfig{
-			RedisHost:     getStrFromEnv("REDIS_HOST"),
-			RedisPort:     readPort("REDIS_PORT"),
-			RedisPassword: getStrFromEnv("REDIS_PASSWORD"),
+			RedisHost:     env.GetStrFromEnv("REDIS_HOST"),
+			RedisPort:     env.ReadPort("REDIS_PORT"),
+			RedisPassword: env.GetStrFromEnv("REDIS_PASSWORD"),
 		},
 	}, nil
 }

@@ -9,6 +9,8 @@ import (
 	"github.com/LittleAksMax/bids-policy-service/internal/health"
 	"github.com/LittleAksMax/bids-policy-service/internal/repository"
 	"github.com/LittleAksMax/bids-policy-service/internal/service"
+
+	"github.com/LittleAksMax/bids-util/requests"
 	"github.com/go-chi/chi/v5"
 )
 
@@ -18,10 +20,20 @@ func NewRouter(cfg *config.Config, dbCfg *db.Config, cacheCfg cache.RequestCache
 
 	RegisterMiddleware(r)
 
+	requests.ApplyCORS(
+		r,
+		cfg.AllowedOrigins,
+		[]string{"GET", "POST", "PUT", "DELETE"},
+		[]string{"Accept", "Authorization", "Content-Type", cfg.Auth.ClaimsHeader, cfg.Auth.TimestampHeader, cfg.Auth.SignatureHeader},
+		[]string{"Set-Cookie"},
+		true,
+		300,
+	)
+
 	// Initialise layers for policies
 	policyRepo := repository.NewMongoPolicyRepository(dbCfg.Database)
 	policyService := service.NewPolicyService(policyRepo, cacheCfg)
-	policyController := NewPolicyController(policyService)
+	policyController := NewPolicyController(policyService, cfg.Auth.ClaimsHeader)
 
 	// Create health checkers map
 	healthCheckers := map[string]health.HealthChecker{
@@ -29,7 +41,7 @@ func NewRouter(cfg *config.Config, dbCfg *db.Config, cacheCfg cache.RequestCache
 		"cache":     cacheCfg,
 	}
 
-	RegisterRoutes(r, policyController, healthCheckers)
+	RegisterRoutes(r, policyController, healthCheckers, cfg.Auth)
 
 	return r
 }

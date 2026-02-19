@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"log"
-	"net/url"
 
 	"github.com/LittleAksMax/bids-policy-service/internal/health"
 	"go.mongodb.org/mongo-driver/bson"
@@ -22,12 +21,8 @@ type MongoConnectionConfig struct {
 
 // DSN builds a MongoDB connection string from component parts.
 func (connCfg *MongoConnectionConfig) DSN() string {
-	userEsc := url.QueryEscape(connCfg.User)
-	passEsc := url.QueryEscape(connCfg.Passwd)
 	return fmt.Sprintf(
-		"mongodb://%s:%s@%s:%d/%s",
-		userEsc,
-		passEsc,
+		"mongodb://%s:%d/%s",
 		connCfg.Host,
 		connCfg.Port,
 		connCfg.Database,
@@ -43,7 +38,12 @@ type Config struct {
 func Connect(ctx context.Context, connCfg *MongoConnectionConfig) (*Config, error) {
 	// Use the SetServerAPIOptions() method to set the Stable API version to 1
 	serverAPI := options.ServerAPI(options.ServerAPIVersion1)
-	creds := options.Credential{Username: connCfg.User, Password: connCfg.Passwd}
+	creds := options.Credential{
+		Username:      connCfg.User,
+		Password:      connCfg.Passwd,
+		AuthSource:    connCfg.Database,
+		AuthMechanism: "SCRAM-SHA-256",
+	}
 	opts := options.Client().ApplyURI(connCfg.DSN()).SetServerAPIOptions(serverAPI).SetAuth(creds)
 
 	// Create a new client and connect to the server

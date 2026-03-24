@@ -87,7 +87,7 @@ func (pc *PolicyController) CreatePolicyHandler(w http.ResponseWriter, r *http.R
 	userID := r.Context().Value(uuidSubjectKey).(uuid.UUID)
 
 	// Get the validated request from context
-	createReq := GetRequestBody[CreatePolicyRequest](r)
+	createReq := requests.GetRequestBody[CreatePolicyRequest](r)
 	if createReq == nil {
 		requests.WriteJSON(w, http.StatusBadRequest, requests.APIResponse{
 			Success: false,
@@ -128,7 +128,7 @@ func (pc *PolicyController) UpdatePolicyHandler(w http.ResponseWriter, r *http.R
 	userID := r.Context().Value(uuidSubjectKey).(uuid.UUID)
 
 	// Get the validated request from context
-	updateReq := GetRequestBody[UpdatePolicyRequest](r)
+	updateReq := requests.GetRequestBody[UpdatePolicyRequest](r)
 	if updateReq == nil {
 		requests.WriteJSON(w, http.StatusBadRequest, requests.APIResponse{
 			Success: false,

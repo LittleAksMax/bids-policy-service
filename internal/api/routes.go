@@ -5,7 +5,9 @@ import (
 
 	"github.com/LittleAksMax/bids-policy-service/internal/config"
 	"github.com/LittleAksMax/bids-policy-service/internal/health"
+	"github.com/LittleAksMax/bids-policy-service/internal/validation"
 	"github.com/LittleAksMax/bids-util/requests"
+	utilsvalidation "github.com/LittleAksMax/bids-util/validation"
 	"github.com/go-chi/chi/v5"
 )
 
@@ -65,10 +67,20 @@ func RegisterRoutes(r chi.Router, pc *PolicyController, healthCheckers map[strin
 				uuidSubjectKey,
 			),
 		)
+
+		validationFuncs := []func(T any) error{
+			utilsvalidation.ValidateRequiredFields,
+			validation.ValidateMarketplace,
+			validation.ValidateType,
+			utilsvalidation.ValidateEmails,
+			utilsvalidation.ValidateUUIDs,
+			utilsvalidation.ValidatePasswords,
+			validation.ValidateRules,
+		}
 		r.Get("/", pc.ListPoliciesHandler)
-		r.With(ValidateRequest[CreatePolicyRequest]()).Post("/", pc.CreatePolicyHandler)
+		r.With(requests.ValidateRequest[CreatePolicyRequest](validationFuncs)).Post("/", pc.CreatePolicyHandler)
 		r.Get("/{id}", pc.GetPolicyHandler)
-		r.With(ValidateRequest[UpdatePolicyRequest]()).Put("/{id}", pc.UpdatePolicyHandler)
+		r.With(requests.ValidateRequest[UpdatePolicyRequest](validationFuncs)).Put("/{id}", pc.UpdatePolicyHandler)
 		r.Delete("/{id}", pc.DeletePolicyHandler)
 	})
 }

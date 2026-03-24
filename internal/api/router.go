@@ -18,7 +18,7 @@ import (
 func NewRouter(cfg *config.Config, dbCfg *db.Config, cacheCfg cache.RequestCache) http.Handler {
 	r := chi.NewRouter()
 
-	RegisterMiddleware(r)
+	requests.RegisterMiddleware(r)
 
 	requests.ApplyCORS(
 		r,

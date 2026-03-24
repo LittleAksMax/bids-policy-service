@@ -105,11 +105,27 @@ const (
 	MpUS = "US"
 	MpCA = "CA"
 	MpMX = "MX"
+	MpBR = "BR"
+	MpAE = "AE"
+	MpBE = "BE"
+	MpEG = "EG"
+	MpIE = "IE"
+	MpIN = "IN"
+	MpNL = "NL"
+	MpPL = "PL"
+	MpSA = "SA"
+	MpSE = "SE"
+	MpTR = "TR"
+	MpZA = "ZA"
+	MpAU = "AU"
+	MpJP = "JP"
+	MpSG = "SG"
 )
 
 func IsValidMarketplace(marketplace string) bool {
 	switch marketplace {
-	case MpUK, MpDE, MpFR, MpIT, MpES, MpUS, MpCA, MpMX:
+	case MpUK, MpDE, MpFR, MpIT, MpES, MpUS, MpCA, MpMX,
+		MpBR, MpAE, MpBE, MpEG, MpIE, MpIN, MpNL, MpPL, MpSA, MpSE, MpTR, MpZA, MpAU, MpJP, MpSG:
 		return true
 	default:
 		return false

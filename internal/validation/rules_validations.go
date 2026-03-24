@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/LittleAksMax/bids-policy-service/internal/repository"
+	utilsvalidation "github.com/LittleAksMax/bids-util/validation"
 )
 
 type nodeHeader struct {
@@ -78,7 +79,7 @@ func UnmarshalRuleNodeJSON(data []byte) (repository.RuleNode, error) {
 		return &c, nil
 
 	default:
-		return nil, &RuleTypeValidationError{validationError{Fields: []string{h.Type}}}
+		return nil, &RuleTypeValidationError{utilsvalidation.ValidationError{Fields: []string{h.Type}}}
 	}
 }
 
@@ -105,7 +106,7 @@ func ValidateRules(v interface{}) error {
 		if fv.Kind() == reflect.Slice && fv.Type().Elem().Kind() == reflect.Uint8 {
 			b := fv.Bytes()
 			if len(b) == 0 {
-				return &RequiredValidationError{validationError{Fields: []string{"rules"}}}
+				return &utilsvalidation.ValidationError{Fields: []string{"rules"}}
 			}
 			// Propagate specific validation errors from unmarshal/recursive validation
 			if _, err := UnmarshalRuleNodeJSON(b); err != nil {
@@ -113,11 +114,11 @@ func ValidateRules(v interface{}) error {
 			}
 		} else {
 			// Wrong type: treat as required violation to keep API surface simple
-			return &RequiredValidationError{validationError{Fields: []string{"rules"}}}
+			return &utilsvalidation.ValidationError{Fields: []string{"rules"}}
 		}
 	}
 	if !found {
-		return &RequiredValidationError{validationError{Fields: []string{"rules"}}}
+		return &utilsvalidation.ValidationError{Fields: []string{"rules"}}
 	}
 	return nil
 }

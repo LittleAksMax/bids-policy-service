@@ -39,10 +39,9 @@ func Connect(ctx context.Context, connCfg *MongoConnectionConfig) (*Config, erro
 	// Use the SetServerAPIOptions() method to set the Stable API version to 1
 	serverAPI := options.ServerAPI(options.ServerAPIVersion1)
 	creds := options.Credential{
-		Username:      connCfg.User,
-		Password:      connCfg.Passwd,
-		AuthSource:    connCfg.Database,
-		AuthMechanism: "SCRAM-SHA-256",
+		Username:   connCfg.User,
+		Password:   connCfg.Passwd,
+		AuthSource: connCfg.Database,
 	}
 	opts := options.Client().ApplyURI(connCfg.DSN()).SetServerAPIOptions(serverAPI).SetAuth(creds)
 

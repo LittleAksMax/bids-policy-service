@@ -5,50 +5,11 @@ import (
 	"strings"
 
 	"github.com/LittleAksMax/bids-policy-service/internal/repository"
+	utilsvalidation "github.com/LittleAksMax/bids-util/validation"
 )
 
-// validationError represents validation errors.
-type validationError struct {
-	Fields []string
-}
-
-type RequiredValidationError struct {
-	validationError
-}
-
-func (e *RequiredValidationError) Error() string {
-	return strings.Join(e.Fields, ", ") + " required"
-}
-
-// EmailValidationError represents email validation errors.
-type EmailValidationError struct {
-	validationError
-}
-
-func (e *EmailValidationError) Error() string {
-	return strings.Join(e.Fields, ", ") + " must be valid email address(es)"
-}
-
-// UUIDValidationError represents UUID validation errors.
-type UUIDValidationError struct {
-	validationError
-}
-
-func (e *UUIDValidationError) Error() string {
-	return strings.Join(e.Fields, ", ") + " must be valid UUID(s)"
-}
-
-// PasswordValidationError represents password validation errors.
-type PasswordValidationError struct {
-	validationError
-}
-
-func (e *PasswordValidationError) Error() string {
-	return strings.Join(e.Fields, ", ") + " must be at least 8 characters"
-}
-
 type RuleTypeValidationError struct {
-	validationError
+	utilsvalidation.ValidationError
 }
 
 func (e *RuleTypeValidationError) Error() string {
@@ -56,7 +17,7 @@ func (e *RuleTypeValidationError) Error() string {
 }
 
 type MarketplaceValidationError struct {
-	validationError
+	utilsvalidation.ValidationError
 }
 
 var allowedMarketplacesStr = strings.Join([]string{
@@ -68,6 +29,21 @@ var allowedMarketplacesStr = strings.Join([]string{
 	repository.MpUS,
 	repository.MpCA,
 	repository.MpMX,
+	repository.MpBR,
+	repository.MpAE,
+	repository.MpBE,
+	repository.MpEG,
+	repository.MpIE,
+	repository.MpIN,
+	repository.MpNL,
+	repository.MpPL,
+	repository.MpSA,
+	repository.MpSE,
+	repository.MpTR,
+	repository.MpZA,
+	repository.MpAU,
+	repository.MpJP,
+	repository.MpSG,
 }, ", ")
 
 func (e *MarketplaceValidationError) Error() string {

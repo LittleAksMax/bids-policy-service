@@ -20,10 +20,10 @@ type PolicyService struct {
 // PolicyServiceInterface defines the contract for policy service logic.
 type PolicyServiceInterface interface {
 	GetPolicy(ctx context.Context, userID uuid.UUID, id string) (*repository.Policy, error)
-	CreatePolicy(ctx context.Context, p *repository.Policy) error
+	CreatePolicy(ctx context.Context, userID uuid.UUID, marketplace, name, script string) (*repository.Policy, error)
 	ListPolicies(ctx context.Context, userID uuid.UUID) ([]*repository.Policy, error)
 	ListPoliciesByMarketplace(ctx context.Context, userID uuid.UUID, marketplace string) ([]*repository.Policy, error)
-	UpdatePolicy(ctx context.Context, userID uuid.UUID, id, name string, rules repository.RuleNode) (*repository.Policy, error)
+	UpdatePolicy(ctx context.Context, userID uuid.UUID, id, name, script string) (*repository.Policy, error)
 	DeletePolicy(ctx context.Context, userID uuid.UUID, id string) (bool, error)
 }
 
@@ -57,8 +57,15 @@ func (s *PolicyService) GetPolicy(ctx context.Context, userID uuid.UUID, id stri
 }
 
 // CreatePolicy creates a new policy.
-func (s *PolicyService) CreatePolicy(ctx context.Context, p *repository.Policy) error {
-	return s.repo.CreatePolicy(ctx, p)
+func (s *PolicyService) CreatePolicy(ctx context.Context, userID uuid.UUID, marketplace, name, script string) (*repository.Policy, error) {
+	p := &repository.Policy{
+		UserID:      userID.String(),
+		Marketplace: marketplace,
+		Name:        name,
+		Script:      script,
+	}
+	err := s.repo.CreatePolicy(ctx, p)
+	return p, err
 }
 
 // ListPolicies retrieves all policies.
@@ -72,7 +79,7 @@ func (s *PolicyService) ListPoliciesByMarketplace(ctx context.Context, userID uu
 }
 
 // UpdatePolicy updates an existing policy.
-func (s *PolicyService) UpdatePolicy(ctx context.Context, userID uuid.UUID, id, name string, rules repository.RuleNode) (*repository.Policy, error) {
+func (s *PolicyService) UpdatePolicy(ctx context.Context, userID uuid.UUID, id, name, script string) (*repository.Policy, error) {
 	objID, err := primitive.ObjectIDFromHex(id)
 	if err != nil {
 		return nil, nil
@@ -85,12 +92,11 @@ func (s *PolicyService) UpdatePolicy(ctx context.Context, userID uuid.UUID, id, 
 	}
 
 	existing.Name = name
-	existing.Rules = rules
+	existing.Script = script
 	err = s.repo.UpdatePolicy(ctx, userID, existing)
 	if err == nil {
 		_ = s.cache.Delete(ctx, userID.String()+":policy:"+existing.ID.Hex()) // Invalidate cache for updated policy
 	}
-	// It's fine to put true, since if err != nil, the update failed, and we handle the error first
 	return existing, err
 }
 

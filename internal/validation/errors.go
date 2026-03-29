@@ -1,20 +1,12 @@
 package validation
 
 import (
-	"fmt"
+	"errors"
 	"strings"
 
 	"github.com/LittleAksMax/bids-policy-service/internal/repository"
 	utilsvalidation "github.com/LittleAksMax/bids-util/validation"
 )
-
-type RuleTypeValidationError struct {
-	utilsvalidation.ValidationError
-}
-
-func (e *RuleTypeValidationError) Error() string {
-	return strings.Join(e.Fields, ", ") + " must be one of: " + repository.NestedRuleType
-}
 
 type MarketplaceValidationError struct {
 	utilsvalidation.ValidationError
@@ -50,58 +42,35 @@ func (e *MarketplaceValidationError) Error() string {
 	return strings.Join(e.Fields, ", ") + " must be one of: " + allowedMarketplacesStr
 }
 
-type RuleNodeTypeValidationError struct {
-	Type string
+type policyValidationError struct {
+	utilsvalidation.ValidationError
+	Details []error
 }
 
-var allowedRuleNodeTypes = strings.Join([]string{repository.ConditionType, repository.TerminalType}, ", ")
+type ScriptValidationError policyValidationError
 
-func (e *RuleNodeTypeValidationError) Error() string {
-	// Empty string denotes missing type field, rather than incorrect value
-	if e.Type == "" {
-		return "Missing rule node type"
+type TreeValidationError policyValidationError
+
+func (e *ScriptValidationError) Error() string {
+	if len(e.Details) > 0 {
+		return errors.Join(e.Details...).Error()
 	}
 
-	return "Invalid rule node type: " + e.Type + ". Must be one of: " + allowedRuleNodeTypes
+	return strings.Join(e.Fields, ", ") + " must be a valid script string"
 }
 
-type RuleNodeOpTypeValidationError struct {
-	Type string
+func (e *ScriptValidationError) Unwrap() []error {
+	return e.Details
 }
 
-var allowedRuleNodeOpTypes = strings.Join([]string{repository.OpMul, repository.OpAdd}, ", ")
+func (e *TreeValidationError) Error() string {
+	if len(e.Details) > 0 {
+		return errors.Join(e.Details...).Error()
+	}
 
-func (e *RuleNodeOpTypeValidationError) Error() string {
-	return "Invalid rule node operator type: " + e.Type + ". Must be one of: " + allowedRuleNodeOpTypes
+	return strings.Join(e.Fields, ", ") + " must be a valid tree object"
 }
 
-type RuleNodeVariableValidationError struct {
-	Variable string
-}
-
-func (e *RuleNodeVariableValidationError) Error() string {
-	return "Invalid rule node variable: " + e.Variable
-}
-
-type RuleNodeRangeValidationError struct {
-	Min float64
-	Max float64
-}
-
-func (e *RuleNodeRangeValidationError) Error() string {
-	return "Invalid rule node range: min(" + formatFloat(e.Min) + ") > max(" + formatFloat(e.Max) + ")"
-}
-
-type RuleNodeBranchMissingValidationError struct {
-	Branch string
-}
-
-func (e *RuleNodeBranchMissingValidationError) Error() string {
-	return "Missing rule node branch: " + e.Branch
-}
-
-// formatFloat provides a minimal float formatting for error messages.
-func formatFloat(f float64) string {
-	// Trim excessive decimals for readability; you can adjust as needed
-	return strings.TrimRight(strings.TrimRight(fmt.Sprintf("%0.6f", f), "0"), ".")
+func (e *TreeValidationError) Unwrap() []error {
+	return e.Details
 }

@@ -20,17 +20,3 @@ func ValidateMarketplace(v interface{}) error {
 	}
 	return nil
 }
-
-// ValidateType checks fields with validate:"type" via repository.IsValidRuleType.
-func ValidateType(v interface{}) error {
-	invalid := utilsvalidation.ValidateByTag(v, "type", func(field reflect.StructField, fv reflect.Value) bool {
-		if fv.Kind() != reflect.String {
-			return false
-		}
-		return !repository.IsValidRuleType(fv.String())
-	})
-	if len(invalid) > 0 {
-		return &RuleTypeValidationError{utilsvalidation.ValidationError{Fields: invalid}}
-	}
-	return nil
-}

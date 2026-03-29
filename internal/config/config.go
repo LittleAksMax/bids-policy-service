@@ -16,6 +16,7 @@ type AuthConfig struct {
 	ClaimsHeader      string
 	TimestampHeader   string
 	SignatureHeader   string
+	APIKey            string
 }
 
 type Config struct {
@@ -42,6 +43,7 @@ func Load() (cfg *Config, err error) {
 			ClaimsHeader:      env.GetStrFromEnv("CLAIMS_HEADER"),
 			TimestampHeader:   env.GetStrFromEnv("TIMESTAMP_HEADER"),
 			SignatureHeader:   env.GetStrFromEnv("SIGNATURE_HEADER"),
+			APIKey:            env.GetStrFromEnv("API_KEY"),
 		},
 		PolicyDB: &db.MongoConnectionConfig{
 			Host:     env.GetStrFromEnv("MONGO_HOST"),

@@ -18,7 +18,7 @@ import (
 func NewRouter(cfg *config.Config, dbCfg *db.Config, cacheCfg cache.RequestCache) http.Handler {
 	r := chi.NewRouter()
 
-	RegisterMiddleware(r)
+	requests.RegisterMiddleware(r)
 
 	requests.ApplyCORS(
 		r,
@@ -35,13 +35,17 @@ func NewRouter(cfg *config.Config, dbCfg *db.Config, cacheCfg cache.RequestCache
 	policyService := service.NewPolicyService(policyRepo, cacheCfg)
 	policyController := NewPolicyController(policyService, cfg.Auth.ClaimsHeader)
 
+	// Initialise layers for converting policy formats
+	convertService := service.NewConvertService()
+	convertController := NewConvertController(convertService)
+
 	// Create health checkers map
 	healthCheckers := map[string]health.HealthChecker{
 		"policy_db": dbCfg,
 		"cache":     cacheCfg,
 	}
 
-	RegisterRoutes(r, policyController, healthCheckers, cfg.Auth)
+	RegisterRoutes(r, policyController, convertController, healthCheckers, cfg.Auth)
 
 	return r
 }

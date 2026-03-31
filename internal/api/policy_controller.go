@@ -1,12 +1,11 @@
 package api
 
 import (
-	"fmt"
 	"net/http"
+	"strings"
 
 	"github.com/LittleAksMax/bids-policy-service/internal/repository"
 	"github.com/LittleAksMax/bids-policy-service/internal/service"
-	"github.com/LittleAksMax/bids-policy-service/internal/validation"
 	"github.com/LittleAksMax/bids-util/requests"
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
@@ -52,7 +51,7 @@ func (pc *PolicyController) GetPolicyHandler(w http.ResponseWriter, r *http.Requ
 	})
 }
 
-// ListPoliciesHandler lists all policies for the user's marketplace (REST GET /policies)
+// ListPoliciesHandler lists all policies for the user's marketplace
 func (pc *PolicyController) ListPoliciesHandler(w http.ResponseWriter, r *http.Request) {
 	userID := r.Context().Value(uuidSubjectKey).(uuid.UUID)
 	// Get marketplace from query parameter
@@ -87,7 +86,7 @@ func (pc *PolicyController) CreatePolicyHandler(w http.ResponseWriter, r *http.R
 	userID := r.Context().Value(uuidSubjectKey).(uuid.UUID)
 
 	// Get the validated request from context
-	createReq := GetRequestBody[CreatePolicyRequest](r)
+	createReq := requests.GetRequestBody[CreatePolicyRequest](r)
 	if createReq == nil {
 		requests.WriteJSON(w, http.StatusBadRequest, requests.APIResponse{
 			Success: false,
@@ -96,18 +95,8 @@ func (pc *PolicyController) CreatePolicyHandler(w http.ResponseWriter, r *http.R
 		return
 	}
 
-	// Convert request DTO to Policy model with user ID from claims
-	policy, err := createReq.ToPolicy(userID)
-	if err != nil {
-		requests.WriteJSON(w, http.StatusBadRequest, requests.APIResponse{
-			Success: false,
-			Error:   "invalid policy data: " + err.Error(),
-		})
-		return
-	}
-
-	// Create policy in service
-	err = pc.service.CreatePolicy(r.Context(), policy)
+	// Call service directly with extracted fields
+	policy, err := pc.service.CreatePolicy(r.Context(), userID, createReq.Marketplace, createReq.Name, strings.ToLower(createReq.Script))
 	if err != nil {
 		requests.WriteJSON(w, http.StatusInternalServerError, requests.APIResponse{
 			Success: false,
@@ -128,7 +117,7 @@ func (pc *PolicyController) UpdatePolicyHandler(w http.ResponseWriter, r *http.R
 	userID := r.Context().Value(uuidSubjectKey).(uuid.UUID)
 
 	// Get the validated request from context
-	updateReq := GetRequestBody[UpdatePolicyRequest](r)
+	updateReq := requests.GetRequestBody[UpdatePolicyRequest](r)
 	if updateReq == nil {
 		requests.WriteJSON(w, http.StatusBadRequest, requests.APIResponse{
 			Success: false,
@@ -137,16 +126,8 @@ func (pc *PolicyController) UpdatePolicyHandler(w http.ResponseWriter, r *http.R
 		return
 	}
 
-	newRules, err := validation.UnmarshalRuleNodeJSON(updateReq.Rules)
-	if err != nil {
-		requests.WriteJSON(w, http.StatusBadRequest, requests.APIResponse{
-			Success: false,
-			Error:   fmt.Sprintf("invalid rules format: %v", err.Error()),
-		})
-	}
-
-	// Update policy in service
-	policy, err := pc.service.UpdatePolicy(r.Context(), userID, id, updateReq.Name, newRules)
+	// Call service directly with extracted fields
+	policy, err := pc.service.UpdatePolicy(r.Context(), userID, id, updateReq.Name, strings.ToLower(updateReq.Script))
 	if err != nil {
 		requests.WriteJSON(w, http.StatusInternalServerError, requests.APIResponse{
 			Success: false,

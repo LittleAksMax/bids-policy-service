@@ -3,7 +3,6 @@ package repository
 import (
 	"context"
 	"errors"
-	"fmt"
 	"log"
 	"strings"
 
@@ -43,21 +42,12 @@ func (r *MongoPolicyRepository) GetPolicy(ctx context.Context, userID uuid.UUID,
 		return nil, err
 	}
 
-	var rules RuleNode
-	if len(doc.Rules) != 0 {
-		rules, err = UnmarshalRuleNodeBSON(doc.Rules)
-		if err != nil {
-			return nil, fmt.Errorf("policy %s: decode rules: %w", doc.ID.Hex(), err)
-		}
-	}
-
 	return &Policy{
 		ID:          doc.ID,
 		UserID:      doc.UserID,
 		Marketplace: doc.Marketplace,
 		Name:        doc.Name,
-		Type:        doc.Type,
-		Rules:       rules,
+		Script:      doc.Script,
 	}, nil
 }
 
@@ -77,10 +67,7 @@ type policyDoc struct {
 	UserID      string             `bson:"user_id"`
 	Marketplace string             `bson:"marketplace"`
 	Name        string             `bson:"name"`
-	Type        string             `bson:"type"`
-
-	// Capture the recursive tree without decoding it yet
-	Rules bson.Raw `bson:"rules"`
+	Script      string             `bson:"script"`
 }
 
 // ListPoliciesWithMarketplace lists policies for a user, optionally filtered by marketplace.
@@ -109,22 +96,12 @@ func (r *MongoPolicyRepository) ListPoliciesWithMarketplace(ctx context.Context,
 
 	policies := make([]*Policy, 0, len(docs))
 	for _, d := range docs {
-		var root RuleNode
-		if len(d.Rules) != 0 {
-			var decErr error
-			root, decErr = UnmarshalRuleNodeBSON(d.Rules)
-			if decErr != nil {
-				return nil, fmt.Errorf("policy %s: decode rules: %w", d.ID.Hex(), decErr)
-			}
-		}
-
 		policies = append(policies, &Policy{
 			ID:          d.ID,
 			UserID:      d.UserID,
 			Marketplace: d.Marketplace,
 			Name:        d.Name,
-			Type:        d.Type,
-			Rules:       root,
+			Script:      d.Script,
 		})
 	}
 
@@ -158,25 +135,20 @@ func (r *MongoPolicyRepository) DeletePolicy(ctx context.Context, userID uuid.UU
 		return nil, err
 	}
 
-	rules, decErr := UnmarshalRuleNodeBSON(doc.Rules)
-	if decErr != nil {
-		return nil, fmt.Errorf("policy %s: decode rules after delete: %w", doc.ID.Hex(), decErr)
-	}
 	return &Policy{
 		ID:          doc.ID,
 		UserID:      doc.UserID,
 		Marketplace: doc.Marketplace,
 		Name:        doc.Name,
-		Type:        doc.Type,
-		Rules:       rules,
+		Script:      doc.Script,
 	}, nil
 }
 
 func (r *MongoPolicyRepository) UpdatePolicy(ctx context.Context, userID uuid.UUID, p *Policy) error {
 	filter := bson.M{"_id": p.ID, "user_id": userID.String()}
 	update := bson.M{"$set": bson.M{
-		"name":  p.Name,
-		"rules": p.Rules,
+		"name":   p.Name,
+		"script": p.Script,
 	}}
 	res, err := r.coll.UpdateOne(ctx, filter, update)
 	if err != nil {

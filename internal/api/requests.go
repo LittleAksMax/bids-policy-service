@@ -21,6 +21,10 @@ type ConvertScriptToTreeRequest struct {
 	Script string `json:"script" validate:"required,script"`
 }
 
+type ConvertTreeToScriptResponse ConvertScriptToTreeRequest
+
 type ConvertTreeToScriptRequest struct {
 	Program convert.Node `json:"program" validate:"required,tree"`
 }
+
+type ConvertScriptToTreeResponse ConvertTreeToScriptRequest

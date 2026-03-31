@@ -264,7 +264,7 @@ func writeCondition(condition convert.ConditionNode, indentation int, builder *s
 			return err
 		}
 
-		builder.WriteString("](")
+		builder.WriteString("] (")
 
 		// We allow inlining if the next statement is terminal
 		if branch.Node.Terminal != nil {

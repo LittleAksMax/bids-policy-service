@@ -74,8 +74,8 @@ func RegisterRoutes(r chi.Router, pc *PolicyController, cc *ConvertController, h
 			validation.ValidateScript,
 		}
 
-		r.With(requests.ValidateRequest[ConvertTreeToScriptRequest](treeValidationFuncs)).Get("/tree-to-script", cc.ConvertTreeToScript)
-		r.With(requests.ValidateRequest[ConvertScriptToTreeRequest](scriptValidationFuncs)).Get("/script-to-tree", cc.ConvertScriptToTree)
+		r.With(requests.ValidateRequest[ConvertTreeToScriptRequest](treeValidationFuncs)).Post("/tree-to-script", cc.ConvertTreeToScript)
+		r.With(requests.ValidateRequest[ConvertScriptToTreeRequest](scriptValidationFuncs)).Post("/script-to-tree", cc.ConvertScriptToTree)
 	})
 
 	// Register policy routes with AuthMiddleware

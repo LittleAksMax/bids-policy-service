@@ -11,8 +11,8 @@ require (
 )
 
 require (
-	github.com/LittleAksMax/bids-util v0.0.6-0.20260327210050-f404e2207881 // indirect
-	github.com/LittleAksMax/bidscript v0.0.0-20260328224844-f55aa6849d4e // indirect
+	github.com/LittleAksMax/bids-util v1.0.0 // indirect
+	github.com/LittleAksMax/bidscript v1.0.0 // indirect
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
 	github.com/dgryski/go-rendezvous v0.0.0-20200823014737-9f7001d12a5f // indirect
 	github.com/go-chi/cors v1.2.2 // indirect

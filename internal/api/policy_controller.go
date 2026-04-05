@@ -78,7 +78,14 @@ func (pc *PolicyController) GetPolicyHandler(w http.ResponseWriter, r *http.Requ
 func (pc *PolicyController) ListPoliciesHandler(w http.ResponseWriter, r *http.Request) {
 	userID := r.Context().Value(uuidSubjectKey).(uuid.UUID)
 	// Get marketplace from query parameter
-	marketplace := r.URL.Query().Get("marketplace")
+	marketplace := strings.TrimSpace(r.URL.Query().Get("marketplace"))
+	if marketplace != "" && !repository.IsValidMarketplace(marketplace) {
+		requests.WriteJSON(w, http.StatusBadRequest, requests.APIResponse{
+			Success: false,
+			Error:   "invalid marketplace",
+		})
+		return
+	}
 
 	var policies []*repository.Policy
 	var err error = nil

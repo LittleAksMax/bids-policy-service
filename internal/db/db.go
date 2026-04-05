@@ -57,7 +57,10 @@ func Connect(ctx context.Context, connCfg *MongoConnectionConfig) (*Config, erro
 	// Send a ping to confirm a successful connection
 	var result bson.M
 	if err := db.RunCommand(ctx, bson.D{{"ping", 1}}).Decode(&result); err != nil {
-		panic(err)
+		if disconnectErr := client.Disconnect(ctx); disconnectErr != nil {
+			return nil, fmt.Errorf("mongo ping failed: %w (disconnect failed: %v)", err, disconnectErr)
+		}
+		return nil, fmt.Errorf("mongo ping failed: %w", err)
 	}
 	log.Println("Pinged your deployment. You successfully connected to MongoDB!")
 

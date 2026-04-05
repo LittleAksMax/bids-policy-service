@@ -1,9 +1,13 @@
 package api
 
 import (
+	"context"
+	"encoding/json"
 	"net/http"
 	"strings"
+	"time"
 
+	"github.com/LittleAksMax/bids-policy-service/internal/cache"
 	"github.com/LittleAksMax/bids-policy-service/internal/repository"
 	"github.com/LittleAksMax/bids-policy-service/internal/service"
 	"github.com/LittleAksMax/bids-util/requests"
@@ -11,22 +15,39 @@ import (
 	"github.com/google/uuid"
 )
 
+const policyCacheTTL = 5 * time.Minute
+
 type PolicyController struct {
-	service          service.PolicyServiceInterface
-	claimsContextKey string
+	service service.PolicyServiceInterface
+	cache   cache.RequestCache
 }
 
-func NewPolicyController(service service.PolicyServiceInterface, claimsContextKey string) *PolicyController {
+func NewPolicyController(service service.PolicyServiceInterface, cache cache.RequestCache) *PolicyController {
 	return &PolicyController{
-		service:          service,
-		claimsContextKey: claimsContextKey,
+		service: service,
+		cache:   cache,
 	}
 }
 
 // GetPolicyHandler retrieves a single policy by ID (REST GET /policies/{id})
 func (pc *PolicyController) GetPolicyHandler(w http.ResponseWriter, r *http.Request) {
 	id := chi.URLParam(r, "id")
+	if !isValidPolicyID(id) {
+		requests.WriteJSON(w, http.StatusBadRequest, requests.APIResponse{
+			Success: false,
+			Error:   "invalid policy id",
+		})
+		return
+	}
 	userID := r.Context().Value(uuidSubjectKey).(uuid.UUID)
+
+	if policy, ok := pc.getCachedPolicy(r.Context(), userID, id); ok {
+		requests.WriteJSON(w, http.StatusOK, requests.APIResponse{
+			Success: true,
+			Data:    policy,
+		})
+		return
+	}
 
 	policy, err := pc.service.GetPolicy(r.Context(), userID, id)
 	if err != nil {
@@ -44,6 +65,8 @@ func (pc *PolicyController) GetPolicyHandler(w http.ResponseWriter, r *http.Requ
 		})
 		return
 	}
+
+	pc.cachePolicy(r.Context(), userID, id, policy)
 
 	requests.WriteJSON(w, http.StatusOK, requests.APIResponse{
 		Success: true,
@@ -114,6 +137,13 @@ func (pc *PolicyController) CreatePolicyHandler(w http.ResponseWriter, r *http.R
 // UpdatePolicyHandler updates an existing policy (REST PUT /policies/{id})
 func (pc *PolicyController) UpdatePolicyHandler(w http.ResponseWriter, r *http.Request) {
 	id := chi.URLParam(r, "id")
+	if !isValidPolicyID(id) {
+		requests.WriteJSON(w, http.StatusBadRequest, requests.APIResponse{
+			Success: false,
+			Error:   "invalid policy id",
+		})
+		return
+	}
 	userID := r.Context().Value(uuidSubjectKey).(uuid.UUID)
 
 	// Get the validated request from context
@@ -144,6 +174,8 @@ func (pc *PolicyController) UpdatePolicyHandler(w http.ResponseWriter, r *http.R
 		return
 	}
 
+	pc.invalidatePolicyCache(r.Context(), userID, id)
+
 	requests.WriteJSON(w, http.StatusOK, requests.APIResponse{
 		Success: true,
 		Data:    policy,
@@ -153,6 +185,13 @@ func (pc *PolicyController) UpdatePolicyHandler(w http.ResponseWriter, r *http.R
 // DeletePolicyHandler deletes a policy (REST DELETE /policies/{id})
 func (pc *PolicyController) DeletePolicyHandler(w http.ResponseWriter, r *http.Request) {
 	id := chi.URLParam(r, "id")
+	if !isValidPolicyID(id) {
+		requests.WriteJSON(w, http.StatusBadRequest, requests.APIResponse{
+			Success: false,
+			Error:   "invalid policy id",
+		})
+		return
+	}
 	userID := r.Context().Value(uuidSubjectKey).(uuid.UUID)
 
 	// Delete policy
@@ -172,8 +211,45 @@ func (pc *PolicyController) DeletePolicyHandler(w http.ResponseWriter, r *http.R
 		return
 	}
 
+	pc.invalidatePolicyCache(r.Context(), userID, id)
+
 	requests.WriteJSON(w, http.StatusOK, requests.APIResponse{
 		Success: true,
 		Data:    map[string]string{"id": id},
 	})
+}
+
+func (pc *PolicyController) getCachedPolicy(ctx context.Context, userID uuid.UUID, id string) (*repository.Policy, bool) {
+	cached, expiresAt, err := pc.cache.Get(ctx, policyCacheKey(userID, id))
+	if err != nil || cached == "" || !expiresAt.After(time.Now()) {
+		return nil, false
+	}
+
+	var policy repository.Policy
+	if err := json.Unmarshal([]byte(cached), &policy); err != nil {
+		return nil, false
+	}
+
+	return &policy, true
+}
+
+func (pc *PolicyController) cachePolicy(ctx context.Context, userID uuid.UUID, id string, policy *repository.Policy) {
+	if policy == nil {
+		return
+	}
+
+	payload, err := json.Marshal(policy)
+	if err != nil {
+		return
+	}
+
+	_ = pc.cache.Set(ctx, policyCacheKey(userID, id), string(payload), policyCacheTTL)
+}
+
+func (pc *PolicyController) invalidatePolicyCache(ctx context.Context, userID uuid.UUID, id string) {
+	_ = pc.cache.Delete(ctx, policyCacheKey(userID, id))
+}
+
+func policyCacheKey(userID uuid.UUID, id string) string {
+	return userID.String() + ":policy:" + strings.ToLower(id)
 }

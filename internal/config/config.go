@@ -1,7 +1,6 @@
 package config
 
 import (
-	"errors"
 	"time"
 
 	"github.com/LittleAksMax/bids-policy-service/internal/cache"
@@ -28,34 +27,47 @@ type Config struct {
 }
 
 func Load() (cfg *Config, err error) {
-	defer func() {
-		if recover() != nil {
-			err = errors.New("failed to load configuration -- maybe an expected environment variable is missing")
-		}
-	}()
+	port := env.ReadPort("PORT")
+	allowedOrigins := env.GetStrListFromEnv("ALLOWED_ORIGINS")
+	accessTokenSecret := env.GetStrFromEnv("ACCESS_TOKEN_SECRET")
+	sharedSecret := env.GetStrFromEnv("X_AUTH_SIG_SECRET")
+	maxSkew := env.ParseDurationEnv("MAX_SKEW")
+	claimsHeader := env.GetStrFromEnv("CLAIMS_HEADER")
+	timestampHeader := env.GetStrFromEnv("TIMESTAMP_HEADER")
+	signatureHeader := env.GetStrFromEnv("SIGNATURE_HEADER")
+	apiKey := env.GetStrFromEnv("API_KEY")
+	mongoHost := env.GetStrFromEnv("MONGO_HOST")
+	mongoPort := env.ReadPort("MONGO_PORT")
+	mongoUsername := env.GetStrFromEnv("MONGO_USERNAME")
+	mongoPassword := env.GetStrFromEnv("MONGO_PASSWORD")
+	mongoDatabase := env.GetStrFromEnv("MONGO_DATABASE")
+	redisHost := env.GetStrFromEnv("REDIS_HOST")
+	redisPort := env.ReadPort("REDIS_PORT")
+	redisPassword := env.GetStrFromEnv("REDIS_PASSWORD")
+
 	return &Config{
-		Port:           env.ReadPort("PORT"),
-		AllowedOrigins: env.GetStrListFromEnv("ALLOWED_ORIGINS"),
+		Port:           port,
+		AllowedOrigins: allowedOrigins,
 		Auth: &AuthConfig{
-			AccessTokenSecret: env.GetStrFromEnv("ACCESS_TOKEN_SECRET"),
-			SharedSecret:      env.GetStrFromEnv("X_AUTH_SIG_SECRET"),
-			MaxSkew:           env.ParseDurationEnv("MAX_SKEW"),
-			ClaimsHeader:      env.GetStrFromEnv("CLAIMS_HEADER"),
-			TimestampHeader:   env.GetStrFromEnv("TIMESTAMP_HEADER"),
-			SignatureHeader:   env.GetStrFromEnv("SIGNATURE_HEADER"),
-			APIKey:            env.GetStrFromEnv("API_KEY"),
+			AccessTokenSecret: accessTokenSecret,
+			SharedSecret:      sharedSecret,
+			MaxSkew:           maxSkew,
+			ClaimsHeader:      claimsHeader,
+			TimestampHeader:   timestampHeader,
+			SignatureHeader:   signatureHeader,
+			APIKey:            apiKey,
 		},
 		PolicyDB: &db.MongoConnectionConfig{
-			Host:     env.GetStrFromEnv("MONGO_HOST"),
-			Port:     env.ReadPort("MONGO_PORT"),
-			User:     env.GetStrFromEnv("MONGO_USERNAME"),
-			Passwd:   env.GetStrFromEnv("MONGO_PASSWORD"),
-			Database: env.GetStrFromEnv("MONGO_DATABASE"),
+			Host:     mongoHost,
+			Port:     mongoPort,
+			User:     mongoUsername,
+			Passwd:   mongoPassword,
+			Database: mongoDatabase,
 		},
 		PolicyCache: &cache.RedisConnectionConfig{
-			RedisHost:     env.GetStrFromEnv("REDIS_HOST"),
-			RedisPort:     env.ReadPort("REDIS_PORT"),
-			RedisPassword: env.GetStrFromEnv("REDIS_PASSWORD"),
+			RedisHost:     redisHost,
+			RedisPort:     redisPort,
+			RedisPassword: redisPassword,
 		},
 	}, nil
 }

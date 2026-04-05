@@ -82,20 +82,6 @@ func validateTree(tree any) error {
 	return errors.Join(errs...)
 }
 
-func isNilTreeValue(tree any) bool {
-	if tree == nil {
-		return true
-	}
-
-	value := reflect.ValueOf(tree)
-	switch value.Kind() {
-	case reflect.Interface, reflect.Map, reflect.Ptr, reflect.Slice:
-		return value.IsNil()
-	default:
-		return false
-	}
-}
-
 func getMetricTypeErrors(root *convert.Node) []error {
 	if root == nil || root.Condition == nil {
 		return nil
@@ -103,11 +89,18 @@ func getMetricTypeErrors(root *convert.Node) []error {
 
 	errs := make([]error, 0)
 	condition := root.Condition
+	expectedMetricType, metricValid := condition.Metric.ValueKind()
 	if !convert.IsValidMetricType(condition.MetricType) {
 		errs = append(errs, fmt.Errorf("condition metric '%s' must define type as %q or %q, got %q",
 			condition.Metric,
 			convert.MetricType("integer"),
 			convert.MetricType("decimal"),
+			condition.MetricType,
+		))
+	} else if metricValid && condition.MetricType != expectedMetricType {
+		errs = append(errs, fmt.Errorf("condition metric '%s' must define type as %q, got %q",
+			condition.Metric,
+			expectedMetricType,
 			condition.MetricType,
 		))
 	}

@@ -2,19 +2,15 @@ package service
 
 import (
 	"context"
-	"encoding/json"
-	"time"
 
-	"github.com/LittleAksMax/bids-policy-service/internal/cache"
 	"github.com/LittleAksMax/bids-policy-service/internal/repository"
 	"github.com/google/uuid"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
-// PolicyService provides business logic for policies, with cache support.
+// PolicyService provides business logic for policies.
 type PolicyService struct {
-	repo  repository.PolicyRepository
-	cache cache.RequestCache
+	repo repository.PolicyRepository
 }
 
 // PolicyServiceInterface defines the contract for policy service logic.
@@ -27,33 +23,18 @@ type PolicyServiceInterface interface {
 	DeletePolicy(ctx context.Context, userID uuid.UUID, id string) (bool, error)
 }
 
-// NewPolicyService creates a new PolicyService
-func NewPolicyService(repo repository.PolicyRepository, cache cache.RequestCache) *PolicyService {
-	return &PolicyService{repo: repo, cache: cache}
+// NewPolicyService creates a new PolicyService.
+func NewPolicyService(repo repository.PolicyRepository) *PolicyService {
+	return &PolicyService{repo: repo}
 }
 
-// GetPolicy retrieves a policy by its ID, first checking the cache.
+// GetPolicy retrieves a policy by its ID.
 func (s *PolicyService) GetPolicy(ctx context.Context, userID uuid.UUID, id string) (*repository.Policy, error) {
-	cacheKey := userID.String() + ":policy:" + id
-	cached, expiresAt, err := s.cache.Get(ctx, cacheKey)
-	if err == nil && cached != "" && expiresAt.After(time.Now()) {
-		var policy repository.Policy
-		if err := json.Unmarshal([]byte(cached), &policy); err == nil {
-			return &policy, nil
-		}
-	}
-
 	objID, err := primitive.ObjectIDFromHex(id)
 	if err != nil {
 		return nil, nil
 	}
-	policy, err := s.repo.GetPolicy(ctx, userID, objID)
-	if err != nil || policy == nil {
-		return policy, err
-	}
-	b, _ := json.Marshal(policy)
-	_ = s.cache.Set(ctx, cacheKey, string(b), 5*time.Minute)
-	return policy, nil
+	return s.repo.GetPolicy(ctx, userID, objID)
 }
 
 // CreatePolicy creates a new policy.
@@ -93,18 +74,11 @@ func (s *PolicyService) UpdatePolicy(ctx context.Context, userID uuid.UUID, id, 
 
 	existing.Name = name
 	existing.Script = script
-	err = s.repo.UpdatePolicy(ctx, userID, existing)
-	if err == nil {
-		_ = s.cache.Delete(ctx, userID.String()+":policy:"+existing.ID.Hex()) // Invalidate cache for updated policy
-	}
-	return existing, err
+	return existing, s.repo.UpdatePolicy(ctx, userID, existing)
 }
 
 // DeletePolicy deletes a policy.
 func (s *PolicyService) DeletePolicy(ctx context.Context, userID uuid.UUID, id string) (bool, error) {
 	policy, err := s.repo.DeletePolicy(ctx, userID, id)
-	if err == nil {
-		_ = s.cache.Delete(ctx, userID.String()+":policy:"+id) // Invalidate cache for deleted policy
-	}
 	return policy != nil, err
 }

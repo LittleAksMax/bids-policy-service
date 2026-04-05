@@ -63,6 +63,6 @@ func (pc *ConvertController) ConvertScriptToTree(w http.ResponseWriter, r *http.
 
 	requests.WriteJSON(w, http.StatusOK, requests.APIResponse{
 		Success: true,
-		Data:    ConvertTreeToScriptRequest{Program: *program},
+		Data:    ConvertScriptToTreeResponse{Program: *program},
 	})
 }

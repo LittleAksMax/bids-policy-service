@@ -21,18 +21,19 @@ func (cfg *RedisConnectionConfig) DSN() string {
 }
 
 var (
-	ErrNotFound = errors.New("refresh token not found")
-	ErrExpired  = errors.New("refresh token expired")
+	ErrCacheMiss    = errors.New("cache entry not found")
+	ErrCacheExpired = errors.New("cache entry expired")
 )
 
-type RedisRefreshStore struct {
+const redisRequestCacheNamespace = "policy-service:request-cache"
+
+type RedisRequestCache struct {
 	Client *redis.Client
-	keyNS  string // namespace prefix e.g. "refresh"
+	keyNS  string // namespace prefix e.g. "policy-service:request-cache"
 }
 
-// NewRedisRefreshStore creates a Redis-backed RefreshTokenStore using values from Config.
-// Returns an error if required Redis connection details are missing.
-func NewRedisRefreshStore(ctx context.Context, cfg *RedisConnectionConfig) (*RedisRefreshStore, error) {
+// NewRedisRequestCache creates a Redis-backed request cache using values from Config.
+func NewRedisRequestCache(ctx context.Context, cfg *RedisConnectionConfig) (*RedisRequestCache, error) {
 	client := redis.NewClient(&redis.Options{
 		Addr:     cfg.DSN(),
 		Password: cfg.RedisPassword,
@@ -49,51 +50,50 @@ func NewRedisRefreshStore(ctx context.Context, cfg *RedisConnectionConfig) (*Red
 
 	log.Println("Pinged your deployment. You successfully connected to Redis!")
 
-	return &RedisRefreshStore{Client: client, keyNS: "refresh"}, nil
+	return &RedisRequestCache{Client: client, keyNS: redisRequestCacheNamespace}, nil
 }
 
-func (s *RedisRefreshStore) buildKey(token string) string {
-	return s.keyNS + ":" + token
+func (s *RedisRequestCache) buildKey(key string) string {
+	return s.keyNS + ":" + key
 }
 
-// Set stores the refresh token with TTL.
-func (s *RedisRefreshStore) Set(ctx context.Context, token string, userID string, expiresIn time.Duration) error {
-	if token == "" || userID == "" {
-		return errors.New("token and userID required")
+// Set stores a cache value with TTL.
+func (s *RedisRequestCache) Set(ctx context.Context, key string, value string, expiresIn time.Duration) error {
+	if key == "" || value == "" {
+		return errors.New("key and value required")
 	}
-	key := s.buildKey(token)
-	// Store userID as value; expiration managed by Redis.
-	return s.Client.Set(ctx, key, userID, expiresIn).Err()
+	cacheKey := s.buildKey(key)
+	return s.Client.Set(ctx, cacheKey, value, expiresIn).Err()
 }
 
-// Get retrieves the userID and calculates expiresAt using TTL.
-func (s *RedisRefreshStore) Get(ctx context.Context, token string) (string, time.Time, error) {
-	key := s.buildKey(token)
-	val, err := s.Client.Get(ctx, key).Result()
+// Get retrieves a cached value and calculates expiresAt using TTL.
+func (s *RedisRequestCache) Get(ctx context.Context, key string) (string, time.Time, error) {
+	cacheKey := s.buildKey(key)
+	val, err := s.Client.Get(ctx, cacheKey).Result()
 	if err != nil {
 		if errors.Is(err, redis.Nil) {
-			return "", time.Time{}, ErrNotFound
+			return "", time.Time{}, ErrCacheMiss
 		}
 		return "", time.Time{}, err
 	}
-	ttl, err := s.Client.TTL(ctx, key).Result()
+	ttl, err := s.Client.TTL(ctx, cacheKey).Result()
 	if err != nil {
 		return "", time.Time{}, err
 	}
-	if ttl <= 0 { // key exists but no TTL or expired
-		return "", time.Time{}, ErrExpired
+	if ttl <= 0 {
+		return "", time.Time{}, ErrCacheExpired
 	}
 	expiresAt := time.Now().Add(ttl)
 	return val, expiresAt, nil
 }
 
-// Delete removes the refresh token key.
-func (s *RedisRefreshStore) Delete(ctx context.Context, token string) error {
-	key := s.buildKey(token)
-	return s.Client.Del(ctx, key).Err()
+// Delete removes a cached key.
+func (s *RedisRequestCache) Delete(ctx context.Context, key string) error {
+	cacheKey := s.buildKey(key)
+	return s.Client.Del(ctx, cacheKey).Err()
 }
 
 // HealthCheck checks if the Redis connection is healthy.
-func (s *RedisRefreshStore) HealthCheck(ctx context.Context) error {
+func (s *RedisRequestCache) HealthCheck(ctx context.Context) error {
 	return s.Client.Ping(ctx).Err()
 }

@@ -48,7 +48,7 @@ func main() {
 		}
 	}()
 
-	cacheCfg, err := cache.NewRedisRefreshStore(ctx, cfg.PolicyCache)
+	cacheCfg, err := cache.NewRedisRequestCache(ctx, cfg.PolicyCache)
 	if err != nil {
 		log.Fatalf("cache connect error: %v", err)
 	}

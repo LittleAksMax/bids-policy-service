@@ -59,18 +59,10 @@ func (e *ScriptValidationError) Error() string {
 	return strings.Join(e.Fields, ", ") + " must be a valid script string"
 }
 
-func (e *ScriptValidationError) Unwrap() []error {
-	return e.Details
-}
-
 func (e *TreeValidationError) Error() string {
 	if len(e.Details) > 0 {
 		return errors.Join(e.Details...).Error()
 	}
 
 	return strings.Join(e.Fields, ", ") + " must be a valid tree object"
-}
-
-func (e *TreeValidationError) Unwrap() []error {
-	return e.Details
 }

@@ -77,6 +77,32 @@ func TestValidateTreeRejectsInvalidMetricType(t *testing.T) {
 	}
 }
 
+func TestValidateTreeRejectsMismatchedMetricType(t *testing.T) {
+	root := convert.Node{
+		Condition: &convert.ConditionNode{
+			Metric:     convert.MetricClicks,
+			MetricType: bidscript.MetricValueKindDecimal,
+			Branches: []convert.BranchNode{
+				{
+					Lower: float64Ptr(0),
+					Upper: float64Ptr(10),
+					Node: convert.Node{
+						Terminal: &convert.TerminalNode{
+							Operator:   convert.OperatorSet,
+							Amount:     1.25,
+							Percentage: false,
+						},
+					},
+				},
+			},
+		},
+	}
+
+	if err := validateTree(root); err == nil {
+		t.Fatal("expected validateTree to reject mismatched metric type")
+	}
+}
+
 func float64Ptr(value float64) *float64 {
 	return &value
 }

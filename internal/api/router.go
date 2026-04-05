@@ -32,8 +32,8 @@ func NewRouter(cfg *config.Config, dbCfg *db.Config, cacheCfg cache.RequestCache
 
 	// Initialise layers for policies
 	policyRepo := repository.NewMongoPolicyRepository(dbCfg.Database)
-	policyService := service.NewPolicyService(policyRepo, cacheCfg)
-	policyController := NewPolicyController(policyService, cfg.Auth.ClaimsHeader)
+	policyService := service.NewPolicyService(policyRepo)
+	policyController := NewPolicyController(policyService, cacheCfg)
 
 	// Initialise layers for converting policy formats
 	convertService := service.NewConvertService()
